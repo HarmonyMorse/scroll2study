@@ -6,6 +6,12 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		4541AD602D52677F001E57DA /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 4541AD5F2D52677F001E57DA /* FirebaseAuth */; };
+		4541AD622D52677F001E57DA /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 4541AD612D52677F001E57DA /* FirebaseCore */; };
+		4541AD662D52695D001E57DA /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 4541AD652D52695D001E57DA /* GoogleService-Info.plist */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		4541AD292D51D120001E57DA /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -27,6 +33,7 @@
 		4541AD182D51D11F001E57DA /* scroll2study.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = scroll2study.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		4541AD282D51D120001E57DA /* scroll2studyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = scroll2studyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4541AD322D51D120001E57DA /* scroll2studyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = scroll2studyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		4541AD652D52695D001E57DA /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -52,6 +59,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4541AD622D52677F001E57DA /* FirebaseCore in Frameworks */,
+				4541AD602D52677F001E57DA /* FirebaseAuth in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -79,6 +88,7 @@
 				4541AD2B2D51D120001E57DA /* scroll2studyTests */,
 				4541AD352D51D120001E57DA /* scroll2studyUITests */,
 				4541AD192D51D11F001E57DA /* Products */,
+				4541AD652D52695D001E57DA /* GoogleService-Info.plist */,
 			);
 			sourceTree = "<group>";
 		};
@@ -112,6 +122,8 @@
 			);
 			name = scroll2study;
 			packageProductDependencies = (
+				4541AD5F2D52677F001E57DA /* FirebaseAuth */,
+				4541AD612D52677F001E57DA /* FirebaseCore */,
 			);
 			productName = scroll2study;
 			productReference = 4541AD182D51D11F001E57DA /* scroll2study.app */;
@@ -195,6 +207,9 @@
 			);
 			mainGroup = 4541AD0F2D51D11F001E57DA;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				4541AD5E2D52677F001E57DA /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 4541AD192D51D11F001E57DA /* Products */;
 			projectDirPath = "";
@@ -212,6 +227,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4541AD662D52695D001E57DA /* GoogleService-Info.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -552,6 +568,30 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		4541AD5E2D52677F001E57DA /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 11.8.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		4541AD5F2D52677F001E57DA /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4541AD5E2D52677F001E57DA /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		4541AD612D52677F001E57DA /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4541AD5E2D52677F001E57DA /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = 4541AD102D51D11F001E57DA /* Project object */;
 }

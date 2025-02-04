@@ -306,3 +306,7 @@ iOSInjectionProject/
 **/xcshareddata/WorkspaceSettings.xcsettings
 
 # End of https://www.toptal.com/developers/gitignore/api/xcode,visualstudiocode,firebase,swift,macos,node
+
+# Firebase config
+**/scroll2study-firebase-adminsdk*.json
+**/GoogleService-Info*.plist

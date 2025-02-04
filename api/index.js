@@ -54,16 +54,18 @@ app.post('/incrementCounter', async (req, res) => {
     }
 });
 
-// Initialize Firebase and start server
-try {
-    initializeApp();
-    const PORT = process.env.PORT || 3000;
-    app.listen(PORT, () =>
-        console.log(`Server listening on port ${PORT}`)
-    );
-} catch (error) {
-    console.error('Failed to initialize Firebase:', error);
-    process.exit(1);
+// Initialize Firebase and start server only if not in test mode
+if (process.env.NODE_ENV !== 'test') {
+    try {
+        initializeApp();
+        const PORT = process.env.PORT || 3000;
+        app.listen(PORT, () =>
+            console.log(`Server listening on port ${PORT}`)
+        );
+    } catch (error) {
+        console.error('Failed to initialize Firebase:', error);
+        process.exit(1);
+    }
 }
 
 export default app 

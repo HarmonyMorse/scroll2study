@@ -8,76 +8,48 @@
 import FirebaseAuth
 import SwiftUI
 
-struct ContentView: View {
-    @State private var isLoggedIn = false
-    @State private var counter = 0
-    @State private var errorMessage = ""
+class ViewState: ObservableObject {
+    @Published var isLoggedIn = false
+    @Published var counter = 0
+    @Published var errorMessage = ""
 
-    var body: some View {
-        VStack(spacing: 20) {
-            if isLoggedIn {
-                Text("Personal Counter: \(counter)")
-                    .font(.title)
-
-                Button("Increment Counter") {
-                    incrementCounter()
-                }
-                .buttonStyle(.borderedProminent)
-
-                Button("Sign Out") {
-                    signOut()
-                }
-                .buttonStyle(.bordered)
-            } else {
-                Text("Welcome to Scroll2Study")
-                    .font(.title)
-
-                Button("Sign In Anonymously") {
-                    signInAnonymously()
-                }
-                .buttonStyle(.borderedProminent)
-            }
-
-            if !errorMessage.isEmpty {
-                Text(errorMessage)
-                    .foregroundColor(.red)
-                    .font(.callout)
-            }
-        }
-        .padding()
-    }
-
-    private func signInAnonymously() {
-        Auth.auth().signInAnonymously { result, error in
-            if let error = error {
-                errorMessage = error.localizedDescription
-                return
-            }
-            isLoggedIn = true
-        }
-    }
-
-    private func signOut() {
+    func signInAnonymously() async {
         do {
-            try Auth.auth().signOut()
-            isLoggedIn = false
-            counter = 0
+            let result = try await Auth.auth().signInAnonymously()
+            await MainActor.run {
+                isLoggedIn = true
+            }
         } catch {
-            errorMessage = error.localizedDescription
+            await MainActor.run {
+                errorMessage = error.localizedDescription
+            }
         }
     }
 
-    private func incrementCounter() {
+    func signOut() async {
+        do {
+            try await Auth.auth().signOut()
+            await MainActor.run {
+                isLoggedIn = false
+                counter = 0
+            }
+        } catch {
+            await MainActor.run {
+                errorMessage = error.localizedDescription
+            }
+        }
+    }
+
+    func incrementCounter() async {
         guard let user = Auth.auth().currentUser else {
-            errorMessage = "Not logged in"
+            await MainActor.run {
+                errorMessage = "Not logged in"
+            }
             return
         }
 
-        user.getIDToken { token, error in
-            guard let token = token else {
-                errorMessage = error?.localizedDescription ?? "Failed to get token"
-                return
-            }
+        do {
+            let token = try await user.getIDToken()
 
             guard let url = URL(string: "http://localhost:3000/incrementCounter") else { return }
 
@@ -85,23 +57,60 @@ struct ContentView: View {
             request.httpMethod = "POST"
             request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
 
-            URLSession.shared.dataTask(with: request) { data, response, error in
-                if let error = error {
-                    DispatchQueue.main.async {
-                        errorMessage = error.localizedDescription
-                    }
-                    return
-                }
-
-                if let data = data,
-                    let response = try? JSONDecoder().decode(CounterResponse.self, from: data)
-                {
-                    DispatchQueue.main.async {
-                        counter = response.personalCounter
-                    }
-                }
-            }.resume()
+            let (data, _) = try await URLSession.shared.data(for: request)
+            let response = try JSONDecoder().decode(CounterResponse.self, from: data)
+            await MainActor.run {
+                counter = response.personalCounter
+            }
+        } catch {
+            await MainActor.run {
+                errorMessage = error.localizedDescription
+            }
         }
+    }
+}
+
+struct ContentView: View {
+    @StateObject private var state = ViewState()
+
+    var body: some View {
+        VStack(spacing: 20) {
+            if state.isLoggedIn {
+                Text("Personal Counter: \(state.counter)")
+                    .font(.title)
+
+                Button("Increment Counter") {
+                    Task {
+                        await state.incrementCounter()
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+
+                Button("Sign Out") {
+                    Task {
+                        await state.signOut()
+                    }
+                }
+                .buttonStyle(.bordered)
+            } else {
+                Text("Welcome to Scroll2Study")
+                    .font(.title)
+
+                Button("Sign In Anonymously") {
+                    Task {
+                        await state.signInAnonymously()
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+            }
+
+            if !state.errorMessage.isEmpty {
+                Text(state.errorMessage)
+                    .foregroundColor(.red)
+                    .font(.callout)
+            }
+        }
+        .padding()
     }
 }
 

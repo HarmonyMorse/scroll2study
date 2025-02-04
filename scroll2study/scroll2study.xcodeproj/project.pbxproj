@@ -12,6 +12,7 @@
 		4541AD662D52695D001E57DA /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 4541AD652D52695D001E57DA /* GoogleService-Info.plist */; };
 		4541AD682D5297CA001E57DA /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 4541AD672D5297CA001E57DA /* FirebaseAuth */; };
 		4541AD6A2D5297CA001E57DA /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 4541AD692D5297CA001E57DA /* FirebaseCore */; };
+		4541AD7C2D52BD63001E57DA /* FirebaseFirestore in Frameworks */ = {isa = PBXBuildFile; productRef = 4541AD7B2D52BD63001E57DA /* FirebaseFirestore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -64,6 +65,7 @@
 			files = (
 				4541AD622D52677F001E57DA /* FirebaseCore in Frameworks */,
 				4541AD602D52677F001E57DA /* FirebaseAuth in Frameworks */,
+				4541AD7C2D52BD63001E57DA /* FirebaseFirestore in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -130,6 +132,7 @@
 			packageProductDependencies = (
 				4541AD5F2D52677F001E57DA /* FirebaseAuth */,
 				4541AD612D52677F001E57DA /* FirebaseCore */,
+				4541AD7B2D52BD63001E57DA /* FirebaseFirestore */,
 			);
 			productName = scroll2study;
 			productReference = 4541AD182D51D11F001E57DA /* scroll2study.app */;
@@ -608,6 +611,11 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 4541AD5E2D52677F001E57DA /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseCore;
+		};
+		4541AD7B2D52BD63001E57DA /* FirebaseFirestore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4541AD5E2D52677F001E57DA /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseFirestore;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

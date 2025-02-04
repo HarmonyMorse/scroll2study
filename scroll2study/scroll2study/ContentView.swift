@@ -12,7 +12,56 @@ import os
 private let logger = Logger(
     subsystem: Bundle.main.bundleIdentifier ?? "scroll2study", category: "ContentView")
 
+enum APIError: Error {
+    case invalidURL
+    case networkError(Error)
+    case decodingError(Error)
+    case serverError(String)
+}
+
+class APIService {
+    private let baseURL = "http://localhost:3000"
+    private let logger = Logger(
+        subsystem: Bundle.main.bundleIdentifier ?? "scroll2study",
+        category: "APIService"
+    )
+
+    func incrementCounter(token: String) async throws -> Int {
+        guard let url = URL(string: "\(baseURL)/incrementCounter") else {
+            logger.error("❌ Invalid URL for increment counter")
+            throw APIError.invalidURL
+        }
+
+        var request = URLRequest(url: url)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        do {
+            logger.info("📡 Sending increment counter request")
+            let (data, response) = try await URLSession.shared.data(for: request)
+
+            guard let httpResponse = response as? HTTPURLResponse else {
+                throw APIError.networkError(NSError(domain: "", code: -1))
+            }
+
+            guard (200...299).contains(httpResponse.statusCode) else {
+                throw APIError.serverError("Server returned status code \(httpResponse.statusCode)")
+            }
+
+            let counterResponse = try JSONDecoder().decode(CounterResponse.self, from: data)
+            logger.info("✅ Counter incremented successfully to: \(counterResponse.personalCounter)")
+            return counterResponse.personalCounter
+        } catch let error as APIError {
+            throw error
+        } catch {
+            logger.error("❌ API request failed: \(error.localizedDescription)")
+            throw APIError.networkError(error)
+        }
+    }
+}
+
 class ViewState: ObservableObject {
+    private let apiService = APIService()
     @Published var isLoggedIn = false
     @Published var counter = 0
     @Published var errorMessage = ""
@@ -73,25 +122,25 @@ class ViewState: ObservableObject {
         logger.info("🔢 Attempting to increment counter for user: \(user.uid)")
         do {
             let token = try await user.getIDToken()
-            logger.debug("🎫 Successfully obtained ID token")
-
-            guard let url = URL(string: "http://localhost:3000/incrementCounter") else {
-                logger.error("❌ Invalid URL for increment counter")
-                return
-            }
-
-            var request = URLRequest(url: url)
-            request.httpMethod = "POST"
-            request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-
-            logger.info("📡 Sending increment counter request")
-            let (data, _) = try await URLSession.shared.data(for: request)
-            let response = try JSONDecoder().decode(CounterResponse.self, from: data)
-            logger.info("✅ Counter incremented successfully to: \(response.personalCounter)")
+            let newCounter = try await apiService.incrementCounter(token: token)
 
             await MainActor.run {
-                counter = response.personalCounter
+                counter = newCounter
                 errorMessage = ""
+            }
+        } catch let error as APIError {
+            logger.error("❌ API Error: \(error)")
+            await MainActor.run {
+                switch error {
+                case .invalidURL:
+                    errorMessage = "Invalid API URL"
+                case .networkError:
+                    errorMessage = "Network error occurred"
+                case .decodingError:
+                    errorMessage = "Error processing server response"
+                case .serverError(let message):
+                    errorMessage = "Server error: \(message)"
+                }
             }
         } catch {
             logger.error("❌ Counter increment failed: \(error.localizedDescription)")

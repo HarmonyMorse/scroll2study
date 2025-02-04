@@ -10,6 +10,8 @@
 		4541AD602D52677F001E57DA /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 4541AD5F2D52677F001E57DA /* FirebaseAuth */; };
 		4541AD622D52677F001E57DA /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 4541AD612D52677F001E57DA /* FirebaseCore */; };
 		4541AD662D52695D001E57DA /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 4541AD652D52695D001E57DA /* GoogleService-Info.plist */; };
+		4541AD682D5297CA001E57DA /* FirebaseAuth in Frameworks */ = {isa = PBXBuildFile; productRef = 4541AD672D5297CA001E57DA /* FirebaseAuth */; };
+		4541AD6A2D5297CA001E57DA /* FirebaseCore in Frameworks */ = {isa = PBXBuildFile; productRef = 4541AD692D5297CA001E57DA /* FirebaseCore */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -34,6 +36,7 @@
 		4541AD282D51D120001E57DA /* scroll2studyTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = scroll2studyTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4541AD322D51D120001E57DA /* scroll2studyUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = scroll2studyUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		4541AD652D52695D001E57DA /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
+		4541AD6B2D52A216001E57DA /* scroll2study.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = scroll2study.xctestplan; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -68,6 +71,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				4541AD6A2D5297CA001E57DA /* FirebaseCore in Frameworks */,
+				4541AD682D5297CA001E57DA /* FirebaseAuth in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -84,6 +89,7 @@
 		4541AD0F2D51D11F001E57DA = {
 			isa = PBXGroup;
 			children = (
+				4541AD6B2D52A216001E57DA /* scroll2study.xctestplan */,
 				4541AD1A2D51D11F001E57DA /* scroll2study */,
 				4541AD2B2D51D120001E57DA /* scroll2studyTests */,
 				4541AD352D51D120001E57DA /* scroll2studyUITests */,
@@ -147,6 +153,8 @@
 			);
 			name = scroll2studyTests;
 			packageProductDependencies = (
+				4541AD672D5297CA001E57DA /* FirebaseAuth */,
+				4541AD692D5297CA001E57DA /* FirebaseCore */,
 			);
 			productName = scroll2studyTests;
 			productReference = 4541AD282D51D120001E57DA /* scroll2studyTests.xctest */;
@@ -587,6 +595,16 @@
 			productName = FirebaseAuth;
 		};
 		4541AD612D52677F001E57DA /* FirebaseCore */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4541AD5E2D52677F001E57DA /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCore;
+		};
+		4541AD672D5297CA001E57DA /* FirebaseAuth */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 4541AD5E2D52677F001E57DA /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAuth;
+		};
+		4541AD692D5297CA001E57DA /* FirebaseCore */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 4541AD5E2D52677F001E57DA /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
 			productName = FirebaseCore;

@@ -166,4 +166,53 @@ final class AuthenticationTests: XCTestCase {
             XCTAssertTrue(true, "Successfully denied access to user document after sign out")
         }
     }
+
+    func testAuthStatePersistence() async throws {
+        // First sign in a user
+        let user = try await authManager.signInAnonymously()
+        let userId = user.uid
+
+        // Wait for auth state to update
+        try await Task.sleep(nanoseconds: 1_000_000_000)  // 1 second
+
+        // Verify initial state
+        XCTAssertTrue(authManager.isAuthenticated, "User should be authenticated initially")
+        XCTAssertNotNil(authManager.user, "User should not be nil initially")
+        XCTAssertEqual(authManager.user?.uid, userId, "User ID should match")
+
+        // Create a new instance of AuthenticationManager
+        let newAuthManager = AuthenticationManager()
+
+        // Wait for auth state to update in new instance
+        try await Task.sleep(nanoseconds: 1_000_000_000)  // 1 second
+
+        // Verify state persists in new instance
+        XCTAssertTrue(newAuthManager.isAuthenticated, "Auth state should persist in new instance")
+        XCTAssertNotNil(newAuthManager.user, "User should not be nil in new instance")
+        XCTAssertEqual(newAuthManager.user?.uid, userId, "User ID should persist in new instance")
+
+        // Verify both instances reflect the same state
+        XCTAssertEqual(
+            authManager.user?.uid,
+            newAuthManager.user?.uid,
+            "Both instances should have same user"
+        )
+        XCTAssertEqual(
+            authManager.isAuthenticated,
+            newAuthManager.isAuthenticated,
+            "Both instances should have same auth state"
+        )
+
+        // Sign out using new instance
+        try newAuthManager.signOut()
+
+        // Wait for auth state to update
+        try await Task.sleep(nanoseconds: 1_000_000_000)  // 1 second
+
+        // Verify both instances reflect signed out state
+        XCTAssertFalse(authManager.isAuthenticated, "Original instance should reflect sign out")
+        XCTAssertFalse(newAuthManager.isAuthenticated, "New instance should reflect sign out")
+        XCTAssertNil(authManager.user, "Original instance user should be nil")
+        XCTAssertNil(newAuthManager.user, "New instance user should be nil")
+    }
 }

@@ -13,7 +13,13 @@ struct VideoPlayerView: View {
     @State private var showSpeedPicker = false
     @State private var currentTime: Double = 0
     @State private var duration: Double = 0
+    @State private var timeObserver: Any?
     private let availableSpeeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
+
+    private var progress: Double {
+        guard duration > 0 else { return 0 }
+        return currentTime / duration
+    }
 
     private var isPlaying: Bool {
         playbackManager.isPlaying(videoId: video.id)
@@ -46,10 +52,45 @@ struct VideoPlayerView: View {
                         }
                     )
                     .overlay(
-                        VStack {
+                        VStack(spacing: 8) {
+                            // Progress bar at the top
+                            GeometryReader { geometry in
+                                VStack(spacing: 0) {
+                                    ZStack(alignment: .leading) {
+                                        Rectangle()
+                                            .fill(Color.gray.opacity(0.3))
+                                            .frame(height: 3)
+
+                                        Rectangle()
+                                            .fill(Color.white)
+                                            .frame(
+                                                width: geometry.size.width * progress,
+                                                height: 3
+                                            )
+                                    }
+                                    .gesture(
+                                        DragGesture(minimumDistance: 0)
+                                            .onChanged { value in
+                                                if duration > 0 {
+                                                    let percentage =
+                                                        value.location.x / geometry.size.width
+                                                    let time =
+                                                        duration
+                                                        * Double(max(0, min(1, percentage)))
+                                                    player.seek(
+                                                        to: CMTime(
+                                                            seconds: time, preferredTimescale: 600))
+                                                }
+                                            }
+                                    )
+                                }
+                            }
+                            .frame(height: 3)
+                            .padding(.top, 8)  // Add some padding from the top edge
+
                             Spacer()
 
-                            // Speed button
+                            // Speed button at the bottom
                             HStack {
                                 Spacer()
                                 Button(action: { showSpeedPicker.toggle() }) {
@@ -62,41 +103,6 @@ struct VideoPlayerView: View {
                                 }
                                 .padding()
                             }
-
-                            // Progress bar
-                            VStack(spacing: 0) {
-                                // Custom progress bar
-                                GeometryReader { geometry in
-                                    ZStack(alignment: .leading) {
-                                        Rectangle()
-                                            .fill(Color.gray.opacity(0.3))
-                                            .frame(height: 3)
-
-                                        Rectangle()
-                                            .fill(Color.white)
-                                            .frame(
-                                                width: geometry.size.width
-                                                    * CGFloat(currentTime / max(duration, 1)),
-                                                height: 3)
-                                    }
-                                }
-                                .frame(height: 3)
-                                .gesture(
-                                    DragGesture(minimumDistance: 0)
-                                        .onChanged { value in
-                                            if duration > 0 {
-                                                let percentage =
-                                                    value.location.x / value.startLocation.x
-                                                let time = duration * Double(percentage)
-                                                player.seek(
-                                                    to: CMTime(
-                                                        seconds: time, preferredTimescale: 600))
-                                            }
-                                        }
-                                )
-                            }
-                            .padding(.horizontal)
-                            .padding(.bottom, 100)  // Space for the nav bar
                         }
                     )
                     .sheet(isPresented: $showSpeedPicker) {
@@ -206,20 +212,40 @@ struct VideoPlayerView: View {
     private func setupTimeObserver() {
         guard let player = player else { return }
 
-        // Update duration
-        if let duration = player.currentItem?.duration {
-            self.duration = duration.seconds
+        // Remove any existing observer
+        removeTimeObserver()
+
+        // Update initial duration
+        if let currentItem = player.currentItem {
+            duration = currentItem.duration.seconds
+
+            // Observe duration changes (in case it wasn't initially available)
+            NotificationCenter.default.addObserver(
+                forName: .AVPlayerItemDidPlayToEndTime,
+                object: currentItem,
+                queue: .main
+            ) { _ in
+                if let duration = player.currentItem?.duration.seconds {
+                    Task { @MainActor in
+                        self.duration = duration
+                    }
+                }
+            }
         }
 
-        // Add time observer
-        let interval = CMTime(seconds: 0.5, preferredTimescale: 600)
-        player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { time in
-            currentTime = time.seconds
+        // Add periodic time observer
+        let interval = CMTime(seconds: 0.1, preferredTimescale: 600)
+        let observer = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { time in
+            self.currentTime = time.seconds
         }
+        timeObserver = observer
     }
 
     private func removeTimeObserver() {
-        // Time observer cleanup is handled by AVPlayer automatically
+        if let observer = timeObserver {
+            player?.removeTimeObserver(observer)
+            timeObserver = nil
+        }
     }
 }
 
@@ -261,24 +287,24 @@ struct SpeedPickerView: View {
 }
 
 #Preview {
-    let metadata = VideoMetadata(
-        duration: 300,
-        views: 0,
-        thumbnailUrl: "",
-        createdAt: Date(),
-        videoUrl: "",
-        storagePath: ""
+    VideoPlayerView(
+        video: Video(
+            id: "test",
+            title: "Test Video",
+            description: "Test Description",
+            subject: "math",
+            complexityLevel: 1,
+            metadata: VideoMetadata(
+                duration: 300,
+                views: 0,
+                thumbnailUrl: "",
+                createdAt: Date(),
+                videoUrl: "",
+                storagePath: ""
+            ),
+            position: Position(x: 0, y: 0),
+            isActive: true
+        ),
+        isCurrent: true
     )
-    let position = Position(x: 0, y: 0)
-    let video = Video(
-        id: "test",
-        title: "Test Video",
-        description: "Test Description",
-        subject: "math",
-        complexityLevel: 1,
-        metadata: metadata,
-        position: position,
-        isActive: true
-    )
-    return VideoPlayerView(video: video, isCurrent: true)
 }

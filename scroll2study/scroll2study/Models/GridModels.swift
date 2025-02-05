@@ -51,12 +51,19 @@ public struct VideoMetadata: Codable {
     public let views: Int
     public let thumbnailUrl: String
     public let createdAt: Date
+    public let videoUrl: String
+    public let storagePath: String
 
-    public init(duration: Int, views: Int, thumbnailUrl: String, createdAt: Date) {
+    public init(
+        duration: Int, views: Int, thumbnailUrl: String, createdAt: Date, videoUrl: String,
+        storagePath: String
+    ) {
         self.duration = duration
         self.views = views
         self.thumbnailUrl = thumbnailUrl
         self.createdAt = createdAt
+        self.videoUrl = videoUrl
+        self.storagePath = storagePath
     }
 }
 

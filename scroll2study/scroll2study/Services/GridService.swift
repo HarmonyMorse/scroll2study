@@ -74,7 +74,9 @@ public class GridService: ObservableObject {
                     duration: metadataData["duration"] as? Int ?? 0,
                     views: metadataData["views"] as? Int ?? 0,
                     thumbnailUrl: metadataData["thumbnailUrl"] as? String ?? "",
-                    createdAt: (metadataData["createdAt"] as? Timestamp ?? Timestamp()).dateValue()
+                    createdAt: (metadataData["createdAt"] as? Timestamp ?? Timestamp()).dateValue(),
+                    videoUrl: metadataData["videoUrl"] as? String ?? "",
+                    storagePath: metadataData["storagePath"] as? String ?? ""
                 )
 
                 let position = Position(

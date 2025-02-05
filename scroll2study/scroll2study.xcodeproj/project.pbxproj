@@ -40,6 +40,16 @@
 		4541AD6B2D52A216001E57DA /* scroll2study.xctestplan */ = {isa = PBXFileReference; lastKnownFileType = text; path = scroll2study.xctestplan; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		4541AD902D5301CC001E57DA /* Exceptions for "scroll2studyUITests" folder in "scroll2studyUITests" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 4541AD312D51D120001E57DA /* scroll2studyUITests */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		4541AD1A2D51D11F001E57DA /* scroll2study */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
@@ -53,6 +63,9 @@
 		};
 		4541AD352D51D120001E57DA /* scroll2studyUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				4541AD902D5301CC001E57DA /* Exceptions for "scroll2studyUITests" folder in "scroll2studyUITests" target */,
+			);
 			path = scroll2studyUITests;
 			sourceTree = "<group>";
 		};
@@ -513,6 +526,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = scroll2studyUITests/Info.plist;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gauntletai.scroll2studyUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -529,6 +543,7 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = scroll2studyUITests/Info.plist;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.gauntletai.scroll2studyUITests;
 				PRODUCT_NAME = "$(TARGET_NAME)";

@@ -1,25 +1,32 @@
+import AVFoundation
 import AVKit
 import FirebaseStorage
 import SwiftUI
 
 struct VideoPlayerView: View {
     let video: Video
+    let isCurrent: Bool
+    @StateObject private var playbackManager = VideoPlaybackManager.shared
     @State private var player: AVPlayer?
-    @State private var isPlaying = false
     @State private var isLoading = false
     @State private var error: Error?
+
+    private var isPlaying: Bool {
+        playbackManager.isPlaying(videoId: video.id)
+    }
 
     var body: some View {
         ZStack {
             if let player = player {
                 VideoPlayer(player: player)
                     .onAppear {
-                        player.play()
-                        isPlaying = true
+                        configureAudioSession()
+                        if isCurrent && !isPlaying {
+                            playbackManager.startPlayback(videoId: video.id, player: player)
+                        }
                     }
                     .onDisappear {
-                        player.pause()
-                        isPlaying = false
+                        playbackManager.stopCurrentPlayback()
                     }
             } else if isLoading {
                 ProgressView()
@@ -59,6 +66,27 @@ struct VideoPlayerView: View {
         .task {
             await loadVideo()
         }
+        // Watch for changes in isCurrent
+        .onChange(of: isCurrent) { newIsCurrent in
+            if newIsCurrent {
+                if let player = player {
+                    playbackManager.startPlayback(videoId: video.id, player: player)
+                }
+            } else if isPlaying {
+                playbackManager.stopCurrentPlayback()
+            }
+        }
+    }
+
+    private func configureAudioSession() {
+        do {
+            try AVAudioSession.sharedInstance().setCategory(
+                .playback, mode: .moviePlayback, options: [.allowAirPlay, .allowBluetooth])
+            try AVAudioSession.sharedInstance().setActive(
+                true, options: .notifyOthersOnDeactivation)
+        } catch {
+            print("Failed to configure audio session: \(error)")
+        }
     }
 
     private func loadVideo() async {
@@ -68,13 +96,13 @@ struct VideoPlayerView: View {
         defer { isLoading = false }
 
         do {
-            // Get the download URL from Firebase Storage
             let storage = Storage.storage()
             let videoRef = storage.reference(forURL: video.metadata.videoUrl)
             let url = try await videoRef.downloadURL()
 
-            // Create and configure the player
             let player = AVPlayer(url: url)
+            player.volume = 1.0
+
             await MainActor.run {
                 self.player = player
             }
@@ -87,13 +115,12 @@ struct VideoPlayerView: View {
     }
 
     private func togglePlayback() {
-        if let player = player {
-            if isPlaying {
-                player.pause()
-            } else {
-                player.play()
-            }
-            isPlaying.toggle()
+        guard let player = player else { return }
+
+        if isPlaying {
+            playbackManager.stopCurrentPlayback()
+        } else {
+            playbackManager.startPlayback(videoId: video.id, player: player)
         }
     }
 }
@@ -118,5 +145,5 @@ struct VideoPlayerView: View {
         position: position,
         isActive: true
     )
-    return VideoPlayerView(video: video)
+    return VideoPlayerView(video: video, isCurrent: true)
 }

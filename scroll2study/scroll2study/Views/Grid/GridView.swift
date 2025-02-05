@@ -1,5 +1,9 @@
 import AVKit
+import FirebaseFirestore
 import SwiftUI
+
+// The GridView file is already in the same module as the other files,
+// so we don't need explicit imports for internal types
 
 struct GridView: View {
     @StateObject private var gridService = GridService()
@@ -32,6 +36,7 @@ struct GridView: View {
             subject: subject,
             level: level,
             hasVideo: gridService.hasVideo(for: subject.id, at: level.level),
+            isCurrent: subjectIndex == currentSubjectIndex && levelIndex == currentLevelIndex,
             gridService: gridService
         )
         .frame(width: geometryWidth, height: geometryHeight)
@@ -175,12 +180,13 @@ struct GridCell: View {
     let subject: Subject
     let level: ComplexityLevel
     let hasVideo: Bool
+    let isCurrent: Bool
     @ObservedObject var gridService: GridService
 
     var body: some View {
         VStack(alignment: .center, spacing: 16) {
             if let video = gridService.getVideo(for: subject.id, at: level.level) {
-                VideoPlayerView(video: video)
+                VideoPlayerView(video: video, isCurrent: isCurrent)
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .overlay(
                         VStack {

@@ -128,4 +128,42 @@ final class AuthenticationTests: XCTestCase {
         XCTAssertTrue(
             authManager.user?.isAnonymous ?? false, "AuthManager should show user as anonymous")
     }
+
+    func testSignOut() async throws {
+        // First sign in a user (using anonymous auth for simplicity)
+        let user = try await authManager.signInAnonymously()
+
+        // Wait for auth state to update
+        try await Task.sleep(nanoseconds: 1_000_000_000)  // 1 second
+
+        // Verify we're signed in
+        XCTAssertTrue(authManager.isAuthenticated, "User should be authenticated before sign out")
+        XCTAssertNotNil(authManager.user, "User should not be nil before sign out")
+
+        // Store the user ID for later verification
+        let userId = user.uid
+
+        // Test sign out
+        try authManager.signOut()
+
+        // Wait for auth state to update
+        try await Task.sleep(nanoseconds: 1_000_000_000)  // 1 second
+
+        // Verify authentication state after sign out
+        XCTAssertFalse(
+            authManager.isAuthenticated, "User should not be authenticated after sign out")
+        XCTAssertNil(authManager.user, "User should be nil after sign out")
+
+        // Verify we can't access the user's Firestore document (should get permission denied)
+        do {
+            _ = try await Firestore.firestore()
+                .collection("users")
+                .document(userId)
+                .getDocument()
+            XCTFail("Should not be able to access user document after sign out")
+        } catch {
+            // Expected error - permission denied
+            XCTAssertTrue(true, "Successfully denied access to user document after sign out")
+        }
+    }
 }

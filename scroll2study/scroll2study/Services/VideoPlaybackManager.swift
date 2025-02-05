@@ -9,6 +9,7 @@ class VideoPlaybackManager: ObservableObject {
     private var currentPlayer: AVPlayer?
     private var timeObserver: Any?
     private var statusObserver: NSKeyValueObservation?
+    private var itemEndObserver: NSObjectProtocol?
 
     private init() {}
 
@@ -24,19 +25,57 @@ class VideoPlaybackManager: ObservableObject {
         currentlyPlayingVideoId = videoId
         currentPlayer = player
 
+        // Always seek to start before playing
+        player.seek(to: .zero)
+
         // Add observers
         setupObservers(for: player)
+
+        // Enable looping
+        setupLooping(for: player)
 
         // Start playback
         player.play()
     }
 
     func stopCurrentPlayback() {
-        currentPlayer?.pause()
+        // Seek to start before stopping
+        if let player = currentPlayer {
+            player.seek(to: .zero)
+            player.pause()
+        }
+
         removeObservers()
         currentPlayer = nil
         currentlyPlayingVideoId = nil
         isBuffering = false
+
+        if let observer = itemEndObserver {
+            NotificationCenter.default.removeObserver(observer)
+            itemEndObserver = nil
+        }
+    }
+
+    private func setupLooping(for player: AVPlayer) {
+        // Remove any existing end observer
+        if let observer = itemEndObserver {
+            NotificationCenter.default.removeObserver(observer)
+            itemEndObserver = nil
+        }
+
+        // Add new end observer
+        itemEndObserver = NotificationCenter.default.addObserver(
+            forName: .AVPlayerItemDidPlayToEndTime,
+            object: player.currentItem,
+            queue: .main
+        ) { [weak self, weak player] _ in
+            // Seek to start and continue playing
+            player?.seek(to: .zero)
+            player?.play()
+
+            // Reset buffering state
+            self?.isBuffering = false
+        }
     }
 
     private func setupObservers(for player: AVPlayer) {
@@ -51,21 +90,23 @@ class VideoPlaybackManager: ObservableObject {
             }
         }
 
-        // Observe playback progress
+        // Observe playback progress (for debugging or future features)
         timeObserver = player.addPeriodicTimeObserver(
             forInterval: CMTime(seconds: 0.5, preferredTimescale: 600),
             queue: .main
-        ) { [weak self] time in
-            if let duration = player.currentItem?.duration,
+        ) { [weak self, weak player] time in
+            guard let player = player,
+                let duration = player.currentItem?.duration,
                 !duration.isIndefinite
-            {
-                let currentTime = time.seconds
-                let totalTime = duration.seconds
+            else { return }
 
-                // If we're at the end of the video (with a small buffer)
-                if currentTime >= totalTime - 0.5 {
-                    self?.stopCurrentPlayback()
-                }
+            // We can use this for progress tracking if needed
+            let currentTime = time.seconds
+            let totalTime = duration.seconds
+
+            // Update buffering state if needed
+            if let self = self {
+                self.isBuffering = player.timeControlStatus == .waitingToPlayAtSpecifiedRate
             }
         }
     }

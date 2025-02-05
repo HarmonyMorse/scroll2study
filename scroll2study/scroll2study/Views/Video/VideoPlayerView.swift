@@ -80,6 +80,8 @@ struct VideoPlayerView: View {
         .onChange(of: isCurrent) { newIsCurrent in
             if newIsCurrent {
                 if let player = player {
+                    // When becoming current, always start from the beginning
+                    player.seek(to: .zero)
                     playbackManager.startPlayback(videoId: video.id, player: player)
                 }
             } else if isPlaying {
@@ -110,8 +112,13 @@ struct VideoPlayerView: View {
             let videoRef = storage.reference(forURL: video.metadata.videoUrl)
             let url = try await videoRef.downloadURL()
 
-            let player = AVPlayer(url: url)
+            // Create player item with looping configuration
+            let playerItem = AVPlayerItem(url: url)
+
+            // Create the player
+            let player = AVPlayer(playerItem: playerItem)
             player.volume = 1.0
+            player.actionAtItemEnd = .none  // Prevent player from pausing at end
 
             await MainActor.run {
                 self.player = player

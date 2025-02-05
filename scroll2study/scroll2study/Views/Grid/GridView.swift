@@ -1,3 +1,4 @@
+import AVKit
 import SwiftUI
 
 struct GridView: View {
@@ -11,6 +12,108 @@ struct GridView: View {
 
     // Percentage of screen width/height needed to trigger a snap
     private let snapThreshold: CGFloat = 0.2
+
+    private var currentSubject: Subject? {
+        guard !gridService.subjects.isEmpty else { return nil }
+        return gridService.subjects[currentSubjectIndex]
+    }
+
+    private var currentLevel: ComplexityLevel? {
+        guard !gridService.complexityLevels.isEmpty else { return nil }
+        return gridService.complexityLevels[currentLevelIndex]
+    }
+
+    private func gridCell(
+        for subject: Subject, level: ComplexityLevel,
+        subjectIndex: Int, levelIndex: Int,
+        geometryWidth: CGFloat, geometryHeight: CGFloat
+    ) -> some View {
+        GridCell(
+            subject: subject,
+            level: level,
+            hasVideo: gridService.hasVideo(for: subject.id, at: level.level),
+            gridService: gridService
+        )
+        .frame(width: geometryWidth, height: geometryHeight)
+        .offset(
+            x: CGFloat(subjectIndex - currentSubjectIndex) * geometryWidth + offset.width,
+            y: CGFloat(levelIndex - currentLevelIndex) * geometryHeight + offset.height
+        )
+    }
+
+    private func handleDragChange(_ value: DragGesture.Value) {
+        if !isDragging {
+            dragStartLocation = value.startLocation
+            isScrollingHorizontally = abs(value.translation.width) > abs(value.translation.height)
+        }
+        isDragging = true
+
+        if isScrollingHorizontally {
+            offset = CGSize(width: value.translation.width, height: 0)
+        } else {
+            offset = CGSize(width: 0, height: value.translation.height)
+        }
+    }
+
+    private func handleDragEnd(_ value: DragGesture.Value, geometrySize: CGSize) {
+        isDragging = false
+        let dragDistance = CGPoint(
+            x: value.location.x - dragStartLocation.x,
+            y: value.location.y - dragStartLocation.y
+        )
+
+        let horizontalPercentage = abs(dragDistance.x / geometrySize.width)
+        let verticalPercentage = abs(dragDistance.y / geometrySize.height)
+
+        withAnimation(.easeInOut(duration: 0.3)) {
+            if isScrollingHorizontally {
+                if horizontalPercentage > snapThreshold {
+                    currentSubjectIndex =
+                        dragDistance.x > 0
+                        ? max(currentSubjectIndex - 1, 0)
+                        : min(currentSubjectIndex + 1, gridService.subjects.count - 1)
+                }
+            } else {
+                if verticalPercentage > snapThreshold {
+                    currentLevelIndex =
+                        dragDistance.y > 0
+                        ? max(currentLevelIndex - 1, 0)
+                        : min(currentLevelIndex + 1, gridService.complexityLevels.count - 1)
+                }
+            }
+            offset = .zero
+        }
+
+        // Reset scrolling direction after animation
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            isScrollingHorizontally = false
+        }
+    }
+
+    private var navigationOverlay: some View {
+        VStack {
+            if let subject = currentSubject,
+                let level = currentLevel
+            {
+                Spacer()
+                HStack(spacing: 4) {
+                    Text(subject.name)
+                        .fontWeight(.bold)
+                    Text("•")
+                        .foregroundColor(.secondary)
+                    Text("Level \(level.name)")
+                        .foregroundColor(.secondary)
+                }
+                .padding(.vertical, 8)
+                .padding(.horizontal, 16)
+                .background(.ultraThinMaterial)
+                .clipShape(Capsule())
+                .shadow(radius: 2)
+                .padding(.bottom, 100)
+            }
+        }
+        .allowsHitTesting(false)
+    }
 
     var body: some View {
         GeometryReader { geometry in
@@ -32,110 +135,28 @@ struct GridView: View {
                             subjectIndex, subject in
                             ForEach(
                                 Array(gridService.complexityLevels.enumerated()), id: \.element.id
-                            ) { levelIndex, level in
-                                GridCell(
-                                    subject: subject,
+                            ) {
+                                levelIndex, level in
+                                gridCell(
+                                    for: subject,
                                     level: level,
-                                    hasVideo: gridService.hasVideo(for: subject.id, at: level.id)
-                                )
-                                .frame(width: geometry.size.width, height: geometry.size.height)
-                                .offset(
-                                    x: CGFloat(subjectIndex - currentSubjectIndex)
-                                        * geometry.size.width + offset.width,
-                                    y: CGFloat(levelIndex - currentLevelIndex)
-                                        * geometry.size.height + offset.height
+                                    subjectIndex: subjectIndex,
+                                    levelIndex: levelIndex,
+                                    geometryWidth: geometry.size.width,
+                                    geometryHeight: geometry.size.height
                                 )
                             }
                         }
 
-                        // Navigation Overlay
-                        VStack {
-                            if !gridService.subjects.isEmpty
-                                && !gridService.complexityLevels.isEmpty
-                            {
-                                let currentSubject = gridService.subjects[currentSubjectIndex]
-                                let currentLevel = gridService.complexityLevels[currentLevelIndex]
-
-                                Spacer()
-
-                                HStack(spacing: 4) {
-                                    Text(currentSubject.name)
-                                        .fontWeight(.bold)
-
-                                    Text("•")
-                                        .foregroundColor(.secondary)
-
-                                    Text("Level \(currentLevel.name)")
-                                        .foregroundColor(.secondary)
-                                }
-                                .padding(.vertical, 8)
-                                .padding(.horizontal, 16)
-                                .background(.ultraThinMaterial)
-                                .clipShape(Capsule())
-                                .shadow(radius: 2)
-                                .padding(.bottom, 100)  // Increased to account for tab bar height
-                            }
-                        }
-                        .allowsHitTesting(false)
+                        navigationOverlay
                     }
                     .gesture(
                         DragGesture()
                             .onChanged { value in
-                                if !isDragging {
-                                    dragStartLocation = value.startLocation
-                                    let horizontalDrag =
-                                        abs(value.translation.width) > abs(value.translation.height)
-                                    isScrollingHorizontally = horizontalDrag
-                                }
-                                isDragging = true
-
-                                if isScrollingHorizontally {
-                                    offset = CGSize(width: value.translation.width, height: 0)
-                                } else {
-                                    offset = CGSize(width: 0, height: value.translation.height)
-                                }
+                                handleDragChange(value)
                             }
                             .onEnded { value in
-                                isDragging = false
-                                let dragDistance = CGPoint(
-                                    x: value.location.x - dragStartLocation.x,
-                                    y: value.location.y - dragStartLocation.y
-                                )
-
-                                // Calculate percentage moved relative to screen size
-                                let horizontalPercentage = abs(dragDistance.x / geometry.size.width)
-                                let verticalPercentage = abs(dragDistance.y / geometry.size.height)
-
-                                withAnimation(.easeInOut(duration: 0.3)) {
-                                    if isScrollingHorizontally {
-                                        if horizontalPercentage > snapThreshold {
-                                            let newIndex =
-                                                dragDistance.x > 0
-                                                ? max(currentSubjectIndex - 1, 0)
-                                                : min(
-                                                    currentSubjectIndex + 1,
-                                                    gridService.subjects.count - 1)
-                                            currentSubjectIndex = newIndex
-                                        }
-                                        offset = .zero
-                                    } else {
-                                        if verticalPercentage > snapThreshold {
-                                            let newIndex =
-                                                dragDistance.y > 0
-                                                ? max(currentLevelIndex - 1, 0)
-                                                : min(
-                                                    currentLevelIndex + 1,
-                                                    gridService.complexityLevels.count - 1)
-                                            currentLevelIndex = newIndex
-                                        }
-                                        offset = .zero
-                                    }
-                                }
-
-                                // Reset scrolling direction after animation
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                    isScrollingHorizontally = false
-                                }
+                                handleDragEnd(value, geometrySize: geometry.size)
                             }
                     )
                     .animation(.easeInOut(duration: 0.3), value: offset)
@@ -154,43 +175,45 @@ struct GridCell: View {
     let subject: Subject
     let level: ComplexityLevel
     let hasVideo: Bool
+    @ObservedObject var gridService: GridService
 
     var body: some View {
         VStack(alignment: .center, spacing: 16) {
-            if hasVideo {
-                Text(level.description)
-                    .font(.body)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-
-                Text(subject.description)
-                    .font(.body)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-                    .foregroundColor(.secondary)
+            if let video = gridService.getVideo(for: subject.id, at: level.level) {
+                VideoPlayerView(video: video)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .overlay(
+                        VStack {
+                            Spacer()
+                            VStack(spacing: 8) {
+                                Text(video.title)
+                                    .font(.headline)
+                                Text(video.description)
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding()
+                            .background(.ultraThinMaterial)
+                        }
+                    )
             } else {
                 Spacer()
-
                 Image(systemName: "video.slash")
                     .font(.system(size: 40))
                     .foregroundColor(.secondary)
-
                 Text("No Video Available")
                     .font(.title3)
                     .foregroundColor(.secondary)
-
                 Text("Content coming soon for this level")
                     .font(.subheadline)
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
                     .padding(.horizontal)
-
                 Spacer()
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.background)
-        .opacity(hasVideo ? 1.0 : 0.8)
     }
 }
 

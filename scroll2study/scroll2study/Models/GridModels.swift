@@ -45,3 +45,58 @@ public struct ComplexityLevel: Identifiable, Codable {
         self.isActive = isActive
     }
 }
+
+public struct VideoMetadata: Codable {
+    public let duration: Int
+    public let views: Int
+    public let thumbnailUrl: String
+    public let createdAt: Date
+
+    public init(duration: Int, views: Int, thumbnailUrl: String, createdAt: Date) {
+        self.duration = duration
+        self.views = views
+        self.thumbnailUrl = thumbnailUrl
+        self.createdAt = createdAt
+    }
+}
+
+public struct Position: Codable {
+    public let x: Int
+    public let y: Int
+
+    public init(x: Int, y: Int) {
+        self.x = x
+        self.y = y
+    }
+}
+
+public struct Video: Identifiable, Codable {
+    public let id: String
+    public let title: String
+    public let description: String
+    public let subject: String
+    public let complexityLevel: Int
+    public let metadata: VideoMetadata
+    public let position: Position
+    public let isActive: Bool
+
+    public init(
+        id: String,
+        title: String,
+        description: String,
+        subject: String,
+        complexityLevel: Int,
+        metadata: VideoMetadata,
+        position: Position,
+        isActive: Bool
+    ) {
+        self.id = id
+        self.title = title
+        self.description = description
+        self.subject = subject
+        self.complexityLevel = complexityLevel
+        self.metadata = metadata
+        self.position = position
+        self.isActive = isActive
+    }
+}

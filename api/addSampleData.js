@@ -50,31 +50,78 @@ const complexityLevels = [
 
 const videos = [
     {
-        id: 'math_l1_1',
-        title: 'Introduction to Algebra',
-        description: 'Basic algebraic concepts',
+        id: 'math_l1_intro',
+        title: 'Introduction to Mathematics',
+        description: 'Basic mathematical concepts and number systems',
         subject: 'math',
         complexityLevel: 1,
         metadata: {
             duration: 300,
             views: 0,
+            thumbnailUrl: 'https://example.com/thumbnails/math_l1_intro.jpg',
             createdAt: admin.firestore.FieldValue.serverTimestamp()
         },
         position: { x: 0, y: 0 },
         isActive: true
     },
     {
-        id: 'physics_l1_1',
-        title: 'Forces and Motion',
-        description: 'Newton\'s laws of motion',
-        subject: 'physics',
+        id: 'math_l1_algebra',
+        title: 'Algebra Fundamentals',
+        description: 'Introduction to algebraic expressions and equations',
+        subject: 'math',
         complexityLevel: 1,
         metadata: {
             duration: 360,
             views: 0,
+            thumbnailUrl: 'https://example.com/thumbnails/math_l1_algebra.jpg',
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+        },
+        position: { x: 0, y: 1 },
+        isActive: true
+    },
+    {
+        id: 'math_l2_advanced',
+        title: 'Advanced Algebra',
+        description: 'Complex equations and problem-solving techniques',
+        subject: 'math',
+        complexityLevel: 2,
+        metadata: {
+            duration: 420,
+            views: 0,
+            thumbnailUrl: 'https://example.com/thumbnails/math_l2_advanced.jpg',
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+        },
+        position: { x: 0, y: 2 },
+        isActive: true
+    },
+    {
+        id: 'physics_l1_mechanics',
+        title: 'Basic Mechanics',
+        description: 'Introduction to forces and motion',
+        subject: 'physics',
+        complexityLevel: 1,
+        metadata: {
+            duration: 330,
+            views: 0,
+            thumbnailUrl: 'https://example.com/thumbnails/physics_l1_mechanics.jpg',
             createdAt: admin.firestore.FieldValue.serverTimestamp()
         },
         position: { x: 1, y: 0 },
+        isActive: true
+    },
+    {
+        id: 'physics_l2_dynamics',
+        title: 'Advanced Dynamics',
+        description: 'Complex motion and force interactions',
+        subject: 'physics',
+        complexityLevel: 2,
+        metadata: {
+            duration: 390,
+            views: 0,
+            thumbnailUrl: 'https://example.com/thumbnails/physics_l2_dynamics.jpg',
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+        },
+        position: { x: 1, y: 1 },
         isActive: true
     }
 ];

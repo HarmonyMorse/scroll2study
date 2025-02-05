@@ -8,7 +8,8 @@ public class GridService: ObservableObject {
     @Published public var complexityLevels: [ComplexityLevel] = []
     @Published public var isLoading = false
     @Published public var error: Error?
-    @Published private(set) public var videos: [String: [String: Bool]] = [:]  // [subjectId: [levelId: hasVideo]]
+    @Published public var videos: [Video] = []
+    @Published public var videoMap: [String: [Int: Video]] = [:]  // [subjectId: [complexityLevel: Video]]
 
     public init() {}
 
@@ -58,25 +59,50 @@ public class GridService: ObservableObject {
                 )
             }
 
-            // Fetch videos to build availability map
+            // Fetch videos
             let videosSnapshot = try await db.collection("videos")
                 .whereField("isActive", isEqualTo: true)
                 .getDocuments()
 
-            // Build video availability map
-            var videoMap: [String: [String: Bool]] = [:]
-            for document in videosSnapshot.documents {
+            // Parse videos and build video map
+            videos = try videosSnapshot.documents.map { document in
                 let data = document.data()
-                if let subjectId = data["subjectId"] as? String,
-                    let levelId = data["complexityLevelId"] as? String
-                {
-                    if videoMap[subjectId] == nil {
-                        videoMap[subjectId] = [:]
-                    }
-                    videoMap[subjectId]?[levelId] = true
-                }
+                let metadataData = data["metadata"] as? [String: Any] ?? [:]
+                let positionData = data["position"] as? [String: Any] ?? [:]
+
+                let metadata = VideoMetadata(
+                    duration: metadataData["duration"] as? Int ?? 0,
+                    views: metadataData["views"] as? Int ?? 0,
+                    thumbnailUrl: metadataData["thumbnailUrl"] as? String ?? "",
+                    createdAt: (metadataData["createdAt"] as? Timestamp ?? Timestamp()).dateValue()
+                )
+
+                let position = Position(
+                    x: positionData["x"] as? Int ?? 0,
+                    y: positionData["y"] as? Int ?? 0
+                )
+
+                return Video(
+                    id: document.documentID,
+                    title: data["title"] as? String ?? "",
+                    description: data["description"] as? String ?? "",
+                    subject: data["subject"] as? String ?? "",
+                    complexityLevel: data["complexityLevel"] as? Int ?? 0,
+                    metadata: metadata,
+                    position: position,
+                    isActive: data["isActive"] as? Bool ?? true
+                )
             }
-            videos = videoMap
+
+            // Build video map for easy access
+            var newVideoMap: [String: [Int: Video]] = [:]
+            for video in videos {
+                if newVideoMap[video.subject] == nil {
+                    newVideoMap[video.subject] = [:]
+                }
+                newVideoMap[video.subject]?[video.complexityLevel] = video
+            }
+            videoMap = newVideoMap
 
             isLoading = false
         } catch {
@@ -85,7 +111,11 @@ public class GridService: ObservableObject {
         }
     }
 
-    public func hasVideo(for subjectId: String, at levelId: String) -> Bool {
-        return videos[subjectId]?[levelId] ?? false
+    public func getVideo(for subject: String, at complexityLevel: Int) -> Video? {
+        return videoMap[subject]?[complexityLevel]
+    }
+
+    public func hasVideo(for subject: String, at complexityLevel: Int) -> Bool {
+        return getVideo(for: subject, at: complexityLevel) != nil
     }
 }

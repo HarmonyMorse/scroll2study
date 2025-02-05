@@ -291,4 +291,98 @@ final class AuthenticationTests: XCTestCase {
         XCTAssertNotNil(data["updatedAt"], "Updated at timestamp should exist")
         XCTAssertNotNil(data["lastActive"], "Last active timestamp should exist")
     }
+
+    func testErrorScenarios() async throws {
+        // Test duplicate email registration
+        let email = "test\(Int.random(in: 1000...9999))@example.com"
+        let password = "TestPassword123!"
+
+        // First registration should succeed
+        _ = try await authManager.signUp(email: email, password: password)
+
+        // Try to register with same email
+        do {
+            _ = try await authManager.signUp(email: email, password: password)
+            XCTFail("Should not allow duplicate email registration")
+        } catch let error as NSError {
+            XCTAssertEqual(error.domain, AuthErrorDomain, "Error should be from Firebase Auth")
+            XCTAssertEqual(
+                error.code,
+                AuthErrorCode.emailAlreadyInUse.rawValue,
+                "Should be email already in use error"
+            )
+        }
+
+        // Test invalid email format
+        do {
+            _ = try await authManager.signUp(email: "notanemail", password: password)
+            XCTFail("Should not allow invalid email format")
+        } catch let error as NSError {
+            XCTAssertEqual(error.domain, AuthErrorDomain, "Error should be from Firebase Auth")
+            XCTAssertEqual(
+                error.code,
+                AuthErrorCode.invalidEmail.rawValue,
+                "Should be invalid email error"
+            )
+        }
+
+        // Test weak password
+        do {
+            _ = try await authManager.signUp(email: "test@example.com", password: "weak")
+            XCTFail("Should not allow weak password")
+        } catch let error as NSError {
+            XCTAssertEqual(error.domain, AuthErrorDomain, "Error should be from Firebase Auth")
+            XCTAssertEqual(
+                error.code,
+                AuthErrorCode.weakPassword.rawValue,
+                "Should be weak password error"
+            )
+        }
+
+        // Test sign in with wrong password
+        do {
+            _ = try await authManager.signIn(email: email, password: "wrongpassword")
+            XCTFail("Should not allow sign in with wrong password")
+        } catch let error as NSError {
+            XCTAssertEqual(error.domain, AuthErrorDomain, "Error should be from Firebase Auth")
+            // Note: Firebase sometimes returns invalidCredential instead of wrongPassword
+            XCTAssertTrue(
+                error.code == AuthErrorCode.wrongPassword.rawValue
+                    || error.code == AuthErrorCode.invalidCredential.rawValue,
+                "Should be wrong password or invalid credential error"
+            )
+        }
+
+        // Test sign in with non-existent user
+        do {
+            _ = try await authManager.signIn(
+                email: "nonexistent@example.com",
+                password: "anypassword"
+            )
+            XCTFail("Should not allow sign in with non-existent user")
+        } catch let error as NSError {
+            XCTAssertEqual(error.domain, AuthErrorDomain, "Error should be from Firebase Auth")
+            // Note: Firebase sometimes returns invalidCredential instead of userNotFound
+            XCTAssertTrue(
+                error.code == AuthErrorCode.userNotFound.rawValue
+                    || error.code == AuthErrorCode.invalidCredential.rawValue,
+                "Should be user not found or invalid credential error"
+            )
+        }
+
+        // Test empty credentials
+        do {
+            _ = try await authManager.signIn(email: "", password: "")
+            XCTFail("Should not allow sign in with empty credentials")
+        } catch let error as NSError {
+            XCTAssertEqual(error.domain, AuthErrorDomain, "Error should be from Firebase Auth")
+            print("Empty credentials error code: \(error.code), domain: \(error.domain)")  // Debug print
+            // Firebase returns error code 17009 for empty credentials
+            XCTAssertEqual(
+                error.code,
+                17009,  // Using exact code since enum value might be incorrect
+                "Should be error code 17009 for empty credentials"
+            )
+        }
+    }
 }

@@ -1,15 +1,17 @@
 import FirebaseFirestore
 import Foundation
 
-class GridService: ObservableObject {
+public class GridService: ObservableObject {
     private let db = Firestore.firestore()
 
-    @Published var subjects: [Subject] = []
-    @Published var complexityLevels: [ComplexityLevel] = []
-    @Published var isLoading = false
-    @Published var error: Error?
+    @Published public var subjects: [Subject] = []
+    @Published public var complexityLevels: [ComplexityLevel] = []
+    @Published public var isLoading = false
+    @Published public var error: Error?
 
-    func fetchGridData() async {
+    public init() {}
+
+    public func fetchGridData() async {
         isLoading = true
         error = nil
 

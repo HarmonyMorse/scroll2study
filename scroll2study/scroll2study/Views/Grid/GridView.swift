@@ -2,44 +2,44 @@ import SwiftUI
 
 struct GridView: View {
     @StateObject private var gridService = GridService()
+    @State private var scrollProxy: ScrollViewProxy? = nil
 
     var body: some View {
-        ZStack {
-            if gridService.isLoading {
-                ProgressView()
-            } else if let error = gridService.error {
-                VStack {
-                    Text("Error loading grid")
-                        .font(.headline)
-                    Text(error.localizedDescription)
-                        .font(.subheadline)
-                        .foregroundColor(.red)
-                }
-            } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(alignment: .top, spacing: 20) {
-                        ForEach(gridService.subjects) { subject in
-                            VStack(alignment: .leading, spacing: 10) {
-                                Text(subject.name)
-                                    .font(.headline)
-                                    .padding(.bottom, 5)
-
-                                ScrollView(.vertical, showsIndicators: true) {
-                                    VStack(spacing: 15) {
-                                        ForEach(gridService.complexityLevels) { level in
-                                            GridCell(subject: subject, level: level)
+        GeometryReader { geometry in
+            ZStack {
+                if gridService.isLoading {
+                    ProgressView()
+                } else if let error = gridService.error {
+                    VStack {
+                        Text("Error loading grid")
+                            .font(.headline)
+                        Text(error.localizedDescription)
+                            .font(.subheadline)
+                            .foregroundColor(.red)
+                    }
+                } else {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        ScrollViewReader { horizontalProxy in
+                            LazyHStack(spacing: 0) {
+                                ForEach(gridService.subjects) { subject in
+                                    ScrollView(.vertical, showsIndicators: false) {
+                                        ScrollViewReader { verticalProxy in
+                                            LazyVStack(spacing: 0) {
+                                                ForEach(gridService.complexityLevels) { level in
+                                                    GridCell(subject: subject, level: level)
+                                                        .id("\(subject.id)_\(level.id)")
+                                                        .frame(
+                                                            width: geometry.size.width,
+                                                            height: geometry.size.height)
+                                                }
+                                            }
                                         }
                                     }
                                 }
                             }
-                            .frame(width: 250)
-                            .padding()
-                            .background(.background)
-                            .cornerRadius(10)
-                            .shadow(radius: 2)
                         }
                     }
-                    .padding()
+                    .edgesIgnoringSafeArea(.all)
                 }
             }
         }
@@ -54,20 +54,28 @@ struct GridCell: View {
     let level: ComplexityLevel
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("\(subject.name) - \(level.name)")
-                .font(.subheadline)
-                .fontWeight(.medium)
+        VStack(alignment: .center, spacing: 16) {
+            Text(subject.name)
+                .font(.largeTitle)
+                .fontWeight(.bold)
+
+            Text("Level: \(level.name)")
+                .font(.title2)
+                .foregroundColor(.secondary)
 
             Text(level.description)
-                .font(.caption)
+                .font(.body)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
+
+            Text(subject.description)
+                .font(.body)
+                .multilineTextAlignment(.center)
+                .padding(.horizontal)
                 .foregroundColor(.secondary)
-                .lineLimit(2)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(.secondary.opacity(0.1))
-        .cornerRadius(8)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(.background)
     }
 }
 

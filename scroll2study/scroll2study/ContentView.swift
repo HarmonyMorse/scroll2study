@@ -66,20 +66,32 @@ struct CounterResponse: Codable {
 
 struct ContentView: View {
     @StateObject private var authManager = AuthenticationManager.shared
+    @State private var selectedTab = 0
 
     var body: some View {
         Group {
             if authManager.isAuthenticated {
-                NavigationView {
-                    GridView()
-                        .navigationTitle("Scroll2Study")
-                        .toolbar {
-                            ToolbarItem(placement: .navigationBarTrailing) {
-                                Button("Sign Out") {
-                                    try? authManager.signOut()
-                                }
-                            }
+                TabView(selection: $selectedTab) {
+                    NavigationView {
+                        GridView()
+                    }
+                    .tabItem {
+                        Label("Explore", systemImage: "square.grid.2x2")
+                    }
+                    .tag(0)
+
+                    NavigationView {
+                        VStack {
+                            Text("Coming Soon")
+                                .font(.title)
+                                .foregroundColor(.secondary)
                         }
+                        .navigationTitle("My Progress")
+                    }
+                    .tabItem {
+                        Label("Progress", systemImage: "chart.line.uptrend.xyaxis")
+                    }
+                    .tag(1)
                 }
             } else {
                 AuthenticationView()

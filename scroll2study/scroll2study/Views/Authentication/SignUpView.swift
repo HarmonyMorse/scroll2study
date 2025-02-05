@@ -9,6 +9,8 @@ struct SignUpView: View {
     @State private var showError = false
     @State private var errorMessage = ""
     @State private var isEmailValid = true
+    @State private var passwordValidation: (isValid: Bool, message: String?) = (true, nil)
+    @State private var showPasswordRequirements = false
 
     var body: some View {
         VStack(spacing: 20) {
@@ -40,6 +42,56 @@ struct SignUpView: View {
             SecureField("Password", text: $password)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .textContentType(.newPassword)
+                .onChange(of: password) { newValue in
+                    passwordValidation = ValidationUtils.isValidPassword(newValue)
+                    showPasswordRequirements = !newValue.isEmpty
+                }
+                .overlay(
+                    !passwordValidation.isValid && !password.isEmpty
+                        ? HStack {
+                            Spacer()
+                            Image(systemName: "exclamationmark.circle.fill")
+                                .foregroundColor(.red)
+                                .padding(.trailing, 8)
+                        } : nil
+                )
+
+            if showPasswordRequirements {
+                VStack(alignment: .leading, spacing: 4) {
+                    if let message = passwordValidation.message {
+                        Text(message)
+                            .font(.caption)
+                            .foregroundColor(.red)
+                    } else {
+                        Text("Password meets all requirements")
+                            .font(.caption)
+                            .foregroundColor(.green)
+                    }
+
+                    Text("Password must:")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    Group {
+                        requirementText(
+                            "Be 8-64 characters long", password.count >= 8 && password.count <= 64)
+                        requirementText(
+                            "Contain at least one uppercase letter",
+                            password.contains(where: { $0.isUppercase }))
+                        requirementText(
+                            "Contain at least one lowercase letter",
+                            password.contains(where: { $0.isLowercase }))
+                        requirementText(
+                            "Contain at least one number", password.contains(where: { $0.isNumber })
+                        )
+                        requirementText(
+                            "Contain at least one special character (!@#$%^&*()_+-=[]{}|;:,.<>?)",
+                            password.rangeOfCharacter(
+                                from: CharacterSet(charactersIn: "!@#$%^&*()_+-=[]{}|;:,.<>?"))
+                                != nil)
+                    }
+                }
+                .padding(.horizontal)
+            }
 
             // Confirm Password field
             SecureField("Confirm Password", text: $confirmPassword)
@@ -51,7 +103,7 @@ struct SignUpView: View {
                 Text("Sign Up")
                     .frame(maxWidth: .infinity)
                     .padding()
-                    .background(Color.blue)
+                    .background(isValidForm ? Color.blue : Color.gray)
                     .foregroundColor(.white)
                     .cornerRadius(10)
             }
@@ -65,15 +117,26 @@ struct SignUpView: View {
         }
     }
 
+    private func requirementText(_ requirement: String, _ isMet: Bool) -> some View {
+        HStack {
+            Image(systemName: isMet ? "checkmark.circle.fill" : "circle")
+                .foregroundColor(isMet ? .green : .secondary)
+            Text(requirement)
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+    }
+
     private var isValidForm: Bool {
-        isEmailValid && !email.isEmpty && !password.isEmpty && password == confirmPassword
-            && password.count >= 6
+        isEmailValid && !email.isEmpty && passwordValidation.isValid && !password.isEmpty
+            && password == confirmPassword
     }
 
     private func signUp() {
         Task {
             do {
                 try ValidationUtils.validateEmail(email)
+                try ValidationUtils.validatePassword(password)
                 authManager.authenticationState = .authenticating
                 _ = try await authManager.signUp(email: email, password: password)
             } catch let error as ValidationError {

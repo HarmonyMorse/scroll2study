@@ -8,7 +8,7 @@ class AuthenticationManager: ObservableObject {
     @Published var authenticationState: AuthenticationState = .unauthenticated
 
     static let shared = AuthenticationManager()
-
+    private let userService = UserService.shared
     private var authStateHandler: AuthStateDidChangeListenerHandle?
 
     init() {
@@ -54,11 +54,15 @@ extension AuthenticationManager {
 
     func signUp(email: String, password: String) async throws -> FirebaseAuth.User {
         let result = try await Auth.auth().createUser(withEmail: email, password: password)
+        // Create user document in Firestore
+        try await userService.createUserDocument(user: result.user)
         return result.user
     }
 
     func signInAnonymously() async throws -> FirebaseAuth.User {
         let result = try await Auth.auth().signInAnonymously()
+        // Create user document in Firestore for anonymous users
+        try await userService.createUserDocument(user: result.user)
         return result.user
     }
 

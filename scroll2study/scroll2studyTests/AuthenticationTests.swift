@@ -101,4 +101,31 @@ final class AuthenticationTests: XCTestCase {
         XCTAssertNotNil(authManager.user, "User should not be nil after sign in")
         XCTAssertEqual(authManager.user?.email, email)
     }
+
+    func testAnonymousSignIn() async throws {
+        // Test anonymous sign in
+        let user = try await authManager.signInAnonymously()
+
+        // Wait for auth state to update
+        try await Task.sleep(nanoseconds: 1_000_000_000)  // 1 second
+
+        // Verify anonymous user is created in Firebase Auth
+        XCTAssertNotNil(user)
+        XCTAssertTrue(user.isAnonymous, "User should be anonymous")
+        XCTAssertNil(user.email, "Anonymous user should not have an email")
+
+        // Verify user document is created in Firestore
+        let userDoc = try await Firestore.firestore()
+            .collection("users")
+            .document(user.uid)
+            .getDocument()
+
+        XCTAssertTrue(userDoc.exists, "Firestore document should exist for anonymous user")
+
+        // Verify authentication state
+        XCTAssertTrue(authManager.isAuthenticated, "User should be authenticated")
+        XCTAssertNotNil(authManager.user, "User should not be nil")
+        XCTAssertTrue(
+            authManager.user?.isAnonymous ?? false, "AuthManager should show user as anonymous")
+    }
 }

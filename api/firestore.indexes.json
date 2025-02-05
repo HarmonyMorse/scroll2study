@@ -1,0 +1,61 @@
+{
+    "indexes": [
+        {
+            "collectionGroup": "grid_cells",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "position.x",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "position.y",
+                    "order": "ASCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "grid_cells",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "subjectId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "complexityId",
+                    "order": "ASCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "user_progress",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "userId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "cellId",
+                    "order": "ASCENDING"
+                }
+            ]
+        },
+        {
+            "collectionGroup": "user_progress",
+            "queryScope": "COLLECTION",
+            "fields": [
+                {
+                    "fieldPath": "userId",
+                    "order": "ASCENDING"
+                },
+                {
+                    "fieldPath": "status",
+                    "order": "ASCENDING"
+                }
+            ]
+        }
+    ],
+    "fieldOverrides": []
+}

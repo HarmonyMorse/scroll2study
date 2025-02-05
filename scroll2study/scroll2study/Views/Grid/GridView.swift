@@ -56,6 +56,8 @@ struct GridView: View {
                                 let currentSubject = gridService.subjects[currentSubjectIndex]
                                 let currentLevel = gridService.complexityLevels[currentLevelIndex]
 
+                                Spacer()
+
                                 HStack(spacing: 4) {
                                     Text(currentSubject.name)
                                         .fontWeight(.bold)
@@ -71,12 +73,9 @@ struct GridView: View {
                                 .background(.ultraThinMaterial)
                                 .clipShape(Capsule())
                                 .shadow(radius: 2)
-                                .padding(.top, 16)
+                                .padding(.bottom, 100)  // Increased to account for tab bar height
                             }
-
-                            Spacer()
                         }
-                        .padding(.top, geometry.safeAreaInsets.top + 64)  // Increased from 44 to 64
                         .allowsHitTesting(false)
                     }
                     .gesture(

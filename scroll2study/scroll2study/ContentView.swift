@@ -71,27 +71,37 @@ struct ContentView: View {
     var body: some View {
         Group {
             if authManager.isAuthenticated {
-                TabView(selection: $selectedTab) {
-                    NavigationView {
-                        GridView()
-                    }
-                    .tabItem {
-                        Label("Explore", systemImage: "square.grid.2x2")
-                    }
-                    .tag(0)
-
-                    NavigationView {
-                        VStack {
-                            Text("Coming Soon")
-                                .font(.title)
-                                .foregroundColor(.secondary)
+                ZStack(alignment: .bottom) {
+                    TabView(selection: $selectedTab) {
+                        NavigationView {
+                            GridView()
                         }
-                        .navigationTitle("My Progress")
+                        .tabItem {
+                            Label("Explore", systemImage: "square.grid.2x2")
+                        }
+                        .tag(0)
+
+                        NavigationView {
+                            VStack {
+                                Text("Coming Soon")
+                                    .font(.title)
+                                    .foregroundColor(.secondary)
+                            }
+                            .navigationTitle("My Progress")
+                        }
+                        .tabItem {
+                            Label("Progress", systemImage: "chart.line.uptrend.xyaxis")
+                        }
+                        .tag(1)
                     }
-                    .tabItem {
-                        Label("Progress", systemImage: "chart.line.uptrend.xyaxis")
+                    .onAppear {
+                        // Set tab bar background to solid white
+                        let tabBarAppearance = UITabBarAppearance()
+                        tabBarAppearance.configureWithOpaqueBackground()
+                        tabBarAppearance.backgroundColor = .systemBackground
+                        UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
+                        UITabBar.appearance().standardAppearance = tabBarAppearance
                     }
-                    .tag(1)
                 }
             } else {
                 AuthenticationView()

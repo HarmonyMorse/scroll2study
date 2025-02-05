@@ -71,12 +71,12 @@ struct GridView: View {
                                 .background(.ultraThinMaterial)
                                 .clipShape(Capsule())
                                 .shadow(radius: 2)
-                                .padding(.top, 8)
+                                .padding(.top, 16)
                             }
 
                             Spacer()
                         }
-                        .padding(.top, geometry.safeAreaInsets.top + 44)  // 44 is the default navigation bar height
+                        .padding(.top, geometry.safeAreaInsets.top + 64)  // Increased from 44 to 64
                         .allowsHitTesting(false)
                     }
                     .gesture(

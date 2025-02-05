@@ -27,21 +27,57 @@ struct GridView: View {
                     }
                 } else {
                     ZStack {
+                        // Grid Content
                         ForEach(Array(gridService.subjects.enumerated()), id: \.element.id) {
                             subjectIndex, subject in
                             ForEach(
                                 Array(gridService.complexityLevels.enumerated()), id: \.element.id
                             ) { levelIndex, level in
-                                GridCell(subject: subject, level: level)
-                                    .frame(width: geometry.size.width, height: geometry.size.height)
-                                    .offset(
-                                        x: CGFloat(subjectIndex - currentSubjectIndex)
-                                            * geometry.size.width + offset.width,
-                                        y: CGFloat(levelIndex - currentLevelIndex)
-                                            * geometry.size.height + offset.height
-                                    )
+                                GridCell(
+                                    subject: subject,
+                                    level: level,
+                                    hasVideo: gridService.hasVideo(for: subject.id, at: level.id)
+                                )
+                                .frame(width: geometry.size.width, height: geometry.size.height)
+                                .offset(
+                                    x: CGFloat(subjectIndex - currentSubjectIndex)
+                                        * geometry.size.width + offset.width,
+                                    y: CGFloat(levelIndex - currentLevelIndex)
+                                        * geometry.size.height + offset.height
+                                )
                             }
                         }
+
+                        // Navigation Overlay
+                        VStack {
+                            if !gridService.subjects.isEmpty
+                                && !gridService.complexityLevels.isEmpty
+                            {
+                                let currentSubject = gridService.subjects[currentSubjectIndex]
+                                let currentLevel = gridService.complexityLevels[currentLevelIndex]
+
+                                HStack(spacing: 4) {
+                                    Text(currentSubject.name)
+                                        .fontWeight(.bold)
+
+                                    Text("•")
+                                        .foregroundColor(.secondary)
+
+                                    Text("Level \(currentLevel.name)")
+                                        .foregroundColor(.secondary)
+                                }
+                                .padding(.vertical, 8)
+                                .padding(.horizontal, 16)
+                                .background(.ultraThinMaterial)
+                                .clipShape(Capsule())
+                                .shadow(radius: 2)
+                                .padding(.top, 8)
+                            }
+
+                            Spacer()
+                        }
+                        .padding(.top, geometry.safeAreaInsets.top + 44)  // 44 is the default navigation bar height
+                        .allowsHitTesting(false)
                     }
                     .gesture(
                         DragGesture()
@@ -118,30 +154,44 @@ struct GridView: View {
 struct GridCell: View {
     let subject: Subject
     let level: ComplexityLevel
+    let hasVideo: Bool
 
     var body: some View {
         VStack(alignment: .center, spacing: 16) {
-            Text(subject.name)
-                .font(.largeTitle)
-                .fontWeight(.bold)
+            if hasVideo {
+                Text(level.description)
+                    .font(.body)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
 
-            Text("Level: \(level.name)")
-                .font(.title2)
-                .foregroundColor(.secondary)
+                Text(subject.description)
+                    .font(.body)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+                    .foregroundColor(.secondary)
+            } else {
+                Spacer()
 
-            Text(level.description)
-                .font(.body)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
+                Image(systemName: "video.slash")
+                    .font(.system(size: 40))
+                    .foregroundColor(.secondary)
 
-            Text(subject.description)
-                .font(.body)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal)
-                .foregroundColor(.secondary)
+                Text("No Video Available")
+                    .font(.title3)
+                    .foregroundColor(.secondary)
+
+                Text("Content coming soon for this level")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal)
+
+                Spacer()
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(.background)
+        .opacity(hasVideo ? 1.0 : 0.8)
     }
 }
 

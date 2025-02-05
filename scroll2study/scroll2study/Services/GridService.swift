@@ -8,6 +8,7 @@ public class GridService: ObservableObject {
     @Published public var complexityLevels: [ComplexityLevel] = []
     @Published public var isLoading = false
     @Published public var error: Error?
+    @Published private(set) public var videos: [String: [String: Bool]] = [:]  // [subjectId: [levelId: hasVideo]]
 
     public init() {}
 
@@ -57,10 +58,34 @@ public class GridService: ObservableObject {
                 )
             }
 
+            // Fetch videos to build availability map
+            let videosSnapshot = try await db.collection("videos")
+                .whereField("isActive", isEqualTo: true)
+                .getDocuments()
+
+            // Build video availability map
+            var videoMap: [String: [String: Bool]] = [:]
+            for document in videosSnapshot.documents {
+                let data = document.data()
+                if let subjectId = data["subjectId"] as? String,
+                    let levelId = data["complexityLevelId"] as? String
+                {
+                    if videoMap[subjectId] == nil {
+                        videoMap[subjectId] = [:]
+                    }
+                    videoMap[subjectId]?[levelId] = true
+                }
+            }
+            videos = videoMap
+
             isLoading = false
         } catch {
             self.error = error
             isLoading = false
         }
+    }
+
+    public func hasVideo(for subjectId: String, at levelId: String) -> Bool {
+        return videos[subjectId]?[levelId] ?? false
     }
 }

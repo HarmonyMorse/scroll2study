@@ -215,4 +215,80 @@ final class AuthenticationTests: XCTestCase {
         XCTAssertNil(authManager.user, "Original instance user should be nil")
         XCTAssertNil(newAuthManager.user, "New instance user should be nil")
     }
+
+    func testFirestoreUserDocumentCreation() async throws {
+        // Create a test user with email/password for better verification
+        let email = "test\(Int.random(in: 1000...9999))@example.com"
+        let password = "TestPassword123!"
+        let user = try await authManager.signUp(email: email, password: password)
+
+        // Wait for auth state and Firestore operations to complete
+        try await Task.sleep(nanoseconds: 1_000_000_000)  // 1 second
+
+        // Fetch the user document
+        let userDoc = try await Firestore.firestore()
+            .collection("users")
+            .document(user.uid)
+            .getDocument()
+
+        XCTAssertTrue(userDoc.exists, "User document should exist in Firestore")
+
+        // Verify document structure
+        guard let data = userDoc.data() else {
+            XCTFail("User document data should not be nil")
+            return
+        }
+
+        // Verify basic fields
+        XCTAssertEqual(data["id"] as? String, user.uid, "Document ID should match user ID")
+        XCTAssertEqual(
+            data["role"] as? String, User.UserRole.consumer.rawValue,
+            "Default role should be consumer")
+
+        // Verify preferences structure
+        guard let preferences = data["preferences"] as? [String: Any] else {
+            XCTFail("Preferences should exist")
+            return
+        }
+        XCTAssertEqual(
+            preferences["selectedSubjects"] as? [String], [], "Selected subjects should be empty")
+        XCTAssertEqual(preferences["preferredLevel"] as? Int, 1, "Preferred level should be 1")
+        XCTAssertEqual(preferences["contentType"] as? [String], [], "Content type should be empty")
+
+        // Verify profile structure
+        guard let profile = data["profile"] as? [String: Any] else {
+            XCTFail("Profile should exist")
+            return
+        }
+        XCTAssertEqual(profile["bio"] as? String, "", "Bio should be empty")
+        XCTAssertEqual(profile["displayName"] as? String, "User", "Display name should be default")
+        XCTAssertEqual(profile["avatarUrl"] as? String, "", "Avatar URL should be empty")
+
+        // Verify stats structure
+        guard let stats = data["stats"] as? [String: Any] else {
+            XCTFail("Stats should exist")
+            return
+        }
+        XCTAssertEqual(stats["totalWatchTime"] as? TimeInterval, 0, "Total watch time should be 0")
+        XCTAssertEqual(stats["completedVideos"] as? Int, 0, "Completed videos should be 0")
+        XCTAssertNotNil(stats["lastLoginAt"], "Last login timestamp should exist")
+
+        // Verify settings structure
+        guard let settings = data["settings"] as? [String: Any] else {
+            XCTFail("Settings should exist")
+            return
+        }
+        XCTAssertTrue(
+            settings["notifications"] as? Bool ?? false,
+            "Notifications should be enabled by default")
+        XCTAssertTrue(
+            settings["autoplay"] as? Bool ?? false, "Autoplay should be enabled by default")
+        XCTAssertEqual(
+            settings["preferredLanguage"] as? String, "en", "Preferred language should be English")
+
+        // Verify timestamps
+        XCTAssertNotNil(data["createdAt"], "Created at timestamp should exist")
+        XCTAssertNotNil(data["updatedAt"], "Updated at timestamp should exist")
+        XCTAssertNotNil(data["lastActive"], "Last active timestamp should exist")
+    }
 }

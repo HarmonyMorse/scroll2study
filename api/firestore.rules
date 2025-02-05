@@ -9,6 +9,24 @@ service cloud.firestore {
     function isOwner(userId) {
       return isAuthenticated() && request.auth.uid == userId;
     }
+
+    function isValidUserData(data) {
+      return data.keys().hasAll(['id', 'lastActive', 'role', 'preferences', 'profile', 'stats', 'settings', 'createdAt', 'updatedAt']) &&
+             data.id is string &&
+             data.lastActive is timestamp &&
+             data.role in ['creator', 'consumer'] &&
+             data.preferences is map &&
+             data.profile is map &&
+             data.stats is map &&
+             data.settings is map &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
+
+    function isValidUserUpdate(data) {
+      let unchangeableFields = ['id', 'createdAt', 'role'];
+      return !request.resource.data.diff(resource.data).affectedKeys().hasAny(unchangeableFields);
+    }
     
     // Public read access for educational content
     match /subjects/{document} {
@@ -28,7 +46,19 @@ service cloud.firestore {
     
     // User data - authenticated access only
     match /users/{userId} {
-      allow read, write: if isOwner(userId);
+      allow get: if isOwner(userId);
+      allow list: if false;  // Prevent listing all users
+      
+      allow create: if isOwner(userId) && 
+                   isValidUserData(request.resource.data) &&
+                   request.resource.data.id == userId;
+      
+      allow update: if isOwner(userId) && 
+                   isValidUserData(request.resource.data) &&
+                   isValidUserUpdate(request.resource.data) &&
+                   request.resource.data.updatedAt > resource.data.updatedAt;
+      
+      allow delete: if false;  // Prevent user deletion (handled by admin)
     }
     
     // Progress tracking - authenticated access only

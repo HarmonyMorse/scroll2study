@@ -28,6 +28,17 @@ struct VideoPlayerView: View {
                     .onDisappear {
                         playbackManager.stopCurrentPlayback()
                     }
+                    .overlay(
+                        Group {
+                            if playbackManager.isBuffering && isPlaying {
+                                ZStack {
+                                    Color.black.opacity(0.3)
+                                    ProgressView()
+                                        .scaleEffect(1.5)
+                                }
+                            }
+                        }
+                    )
             } else if isLoading {
                 ProgressView()
                     .scaleEffect(1.5)
@@ -66,7 +77,6 @@ struct VideoPlayerView: View {
         .task {
             await loadVideo()
         }
-        // Watch for changes in isCurrent
         .onChange(of: isCurrent) { newIsCurrent in
             if newIsCurrent {
                 if let player = player {

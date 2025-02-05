@@ -70,15 +70,16 @@ struct ContentView: View {
     var body: some View {
         Group {
             if authManager.isAuthenticated {
-                // Main app content will go here
-                VStack {
-                    Text("Welcome \(authManager.user?.email ?? "Guest")!")
-                        .padding()
-
-                    Button("Sign Out") {
-                        try? authManager.signOut()
-                    }
-                    .buttonStyle(.bordered)
+                NavigationView {
+                    GridView()
+                        .navigationTitle("Scroll2Study")
+                        .toolbar {
+                            ToolbarItem(placement: .navigationBarTrailing) {
+                                Button("Sign Out") {
+                                    try? authManager.signOut()
+                                }
+                            }
+                        }
                 }
             } else {
                 AuthenticationView()

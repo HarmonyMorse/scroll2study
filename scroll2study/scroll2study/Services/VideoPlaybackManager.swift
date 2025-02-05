@@ -17,7 +17,7 @@ class VideoPlaybackManager: ObservableObject {
         removeObservers()
     }
 
-    func startPlayback(videoId: String, player: AVPlayer) {
+    func startPlayback(videoId: String, player: AVPlayer, seekToStart: Bool = false) {
         // Stop current playback if any
         stopCurrentPlayback()
 
@@ -25,8 +25,10 @@ class VideoPlaybackManager: ObservableObject {
         currentlyPlayingVideoId = videoId
         currentPlayer = player
 
-        // Always seek to start before playing
-        player.seek(to: .zero)
+        // Only seek to start if explicitly requested (e.g., when changing videos)
+        if seekToStart {
+            player.seek(to: .zero)
+        }
 
         // Add observers
         setupObservers(for: player)
@@ -39,12 +41,8 @@ class VideoPlaybackManager: ObservableObject {
     }
 
     func stopCurrentPlayback() {
-        // Seek to start before stopping
-        if let player = currentPlayer {
-            player.seek(to: .zero)
-            player.pause()
-        }
-
+        // Don't seek to start when pausing
+        currentPlayer?.pause()
         removeObservers()
         currentPlayer = nil
         currentlyPlayingVideoId = nil

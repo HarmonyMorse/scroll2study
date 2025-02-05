@@ -5,7 +5,8 @@ const serviceAccount = require('./config/scroll2study-firebase-adminsdk-fbsvc-3d
 
 if (!admin.apps.length) {
     admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount)
+        credential: admin.credential.cert(serviceAccount),
+        storageBucket: 'scroll2study.firebasestorage.app'
     });
 }
 
@@ -26,6 +27,27 @@ const subjects = [
         description: 'Fundamental physics principles',
         order: 2,
         isActive: true
+    },
+    {
+        id: 'chemistry',
+        name: 'Chemistry',
+        description: 'Chemical principles and reactions',
+        order: 3,
+        isActive: true
+    },
+    {
+        id: 'biology',
+        name: 'Biology',
+        description: 'Life sciences and organisms',
+        order: 4,
+        isActive: true
+    },
+    {
+        id: 'cs',
+        name: 'Computer Science',
+        description: 'Programming and computational thinking',
+        order: 5,
+        isActive: true
     }
 ];
 
@@ -45,86 +67,67 @@ const complexityLevels = [
         description: 'Building on basics',
         requirements: 'Level 1 completion',
         order: 2
+    },
+    {
+        id: 'level3',
+        level: 3,
+        name: 'Advanced',
+        description: 'Complex topics and applications',
+        requirements: 'Level 2 completion',
+        order: 3
     }
 ];
 
-const videos = [
-    {
-        id: 'math_l1_intro',
-        title: 'Introduction to Mathematics',
-        description: 'Basic mathematical concepts and number systems',
-        subject: 'math',
-        complexityLevel: 1,
-        metadata: {
-            duration: 300,
-            views: 0,
-            thumbnailUrl: 'https://example.com/thumbnails/math_l1_intro.jpg',
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
-        },
-        position: { x: 0, y: 0 },
-        isActive: true
-    },
-    {
-        id: 'math_l1_algebra',
-        title: 'Algebra Fundamentals',
-        description: 'Introduction to algebraic expressions and equations',
-        subject: 'math',
-        complexityLevel: 1,
-        metadata: {
-            duration: 360,
-            views: 0,
-            thumbnailUrl: 'https://example.com/thumbnails/math_l1_algebra.jpg',
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
-        },
-        position: { x: 0, y: 1 },
-        isActive: true
-    },
-    {
-        id: 'math_l2_advanced',
-        title: 'Advanced Algebra',
-        description: 'Complex equations and problem-solving techniques',
-        subject: 'math',
-        complexityLevel: 2,
-        metadata: {
-            duration: 420,
-            views: 0,
-            thumbnailUrl: 'https://example.com/thumbnails/math_l2_advanced.jpg',
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
-        },
-        position: { x: 0, y: 2 },
-        isActive: true
-    },
-    {
-        id: 'physics_l1_mechanics',
-        title: 'Basic Mechanics',
-        description: 'Introduction to forces and motion',
-        subject: 'physics',
-        complexityLevel: 1,
-        metadata: {
-            duration: 330,
-            views: 0,
-            thumbnailUrl: 'https://example.com/thumbnails/physics_l1_mechanics.jpg',
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
-        },
-        position: { x: 1, y: 0 },
-        isActive: true
-    },
-    {
-        id: 'physics_l2_dynamics',
-        title: 'Advanced Dynamics',
-        description: 'Complex motion and force interactions',
-        subject: 'physics',
-        complexityLevel: 2,
-        metadata: {
-            duration: 390,
-            views: 0,
-            thumbnailUrl: 'https://example.com/thumbnails/physics_l2_dynamics.jpg',
-            createdAt: admin.firestore.FieldValue.serverTimestamp()
-        },
-        position: { x: 1, y: 1 },
-        isActive: true
-    }
+// Available video files from storage
+const availableVideos = [
+    'vids/RPReplay_Final1619234227.mov',
+    'vids/RPReplay_Final1621912841.mov',
+    'vids/RPReplay_Final1621912895.mov',
+    'vids/RPReplay_Final1623207673.mov',
+    'vids/RPReplay_Final1623207810.mov',
+    'vids/RPReplay_Final1623207894.mov',
+    'vids/RPReplay_Final1623207917.mov',
+    'vids/RPReplay_Final1623207960.mov',
+    'vids/RPReplay_Final1623207982.mov',
+    'vids/RPReplay_Final1623208751.mov',
+    'vids/RPReplay_Final1623475654.mov',
+    'vids/RPReplay_Final1630290820.mov',
+    'vids/RPReplay_Final1633115354.MP4',
+    'vids/RPReplay_Final1619234227 2.mov',
+    'vids/RPReplay_Final1619234227 3.mov'
 ];
+
+// Function to get a random video and remove it from the array
+function getRandomVideo() {
+    const index = Math.floor(Math.random() * availableVideos.length);
+    return availableVideos.splice(index, 1)[0];
+}
+
+const videos = [];
+let position = { x: 0, y: 0 };
+
+// Create one video for each subject at each complexity level
+subjects.forEach((subject, subjectIndex) => {
+    complexityLevels.forEach((level, levelIndex) => {
+        const videoPath = getRandomVideo();
+        videos.push({
+            id: `${subject.id}_l${level.level}`,
+            title: `${subject.name} - ${level.name}`,
+            description: `${level.name} level ${subject.name} concepts`,
+            subject: subject.id,
+            complexityLevel: level.level,
+            metadata: {
+                duration: 300, // placeholder duration
+                views: 0,
+                videoUrl: `gs://scroll2study.firebasestorage.app/${videoPath}`,
+                storagePath: videoPath,
+                createdAt: admin.firestore.FieldValue.serverTimestamp()
+            },
+            position: { x: subjectIndex, y: levelIndex },
+            isActive: true
+        });
+    });
+});
 
 // Add data to Firestore
 async function addSampleData() {
@@ -151,6 +154,7 @@ async function addSampleData() {
         // Add videos
         for (const video of videos) {
             await db.collection('videos').doc(video.id).set(video);
+            console.log(`Added video: ${video.id} with storage path: ${video.metadata.storagePath}`);
         }
         console.log('Added videos');
 

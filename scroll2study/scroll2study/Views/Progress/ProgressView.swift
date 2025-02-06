@@ -10,6 +10,7 @@ class ProgressViewModel: ObservableObject {
     @Published var error: Error?
 
     private let db = Firestore.firestore()
+    let gridService = GridService()  // Make this public since we need it in the view
 
     func fetchData() async {
         guard let userId = Auth.auth().currentUser?.uid else { return }
@@ -19,7 +20,6 @@ class ProgressViewModel: ObservableObject {
 
         do {
             // Fetch subjects and complexity levels using existing GridService
-            let gridService = GridService()
             await gridService.fetchGridData()
 
             subjects = gridService.subjects.sorted(by: { $0.order < $1.order })
@@ -88,6 +88,7 @@ struct VideoProgressView: View {
 
     private func progressCell(for subject: Subject, level: ComplexityLevel) -> some View {
         let isWatched = viewModel.progressMap[subject.id]?[level.level] ?? false
+        let hasVideo = viewModel.gridService.hasVideo(for: subject.id, at: level.level)
 
         return ZStack {
             RoundedRectangle(cornerRadius: 4)
@@ -97,7 +98,11 @@ struct VideoProgressView: View {
                         .strokeBorder(Color.gray.opacity(0.2), lineWidth: 1)
                 )
 
-            if isWatched {
+            if !hasVideo {
+                Image(systemName: "xmark")
+                    .foregroundColor(.gray)
+                    .font(.system(size: 12, weight: .bold))
+            } else if isWatched {
                 Image(systemName: "checkmark")
                     .foregroundColor(.white)
                     .font(.system(size: 12, weight: .bold))

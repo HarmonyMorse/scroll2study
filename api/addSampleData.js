@@ -11,18 +11,45 @@ if (!admin.apps.length) {
 }
 
 const db = admin.firestore();
-
-// Get download URL for the video
 const bucket = admin.storage().bucket();
-const videoFile = bucket.file('vids/rice.mov');
-const [videoUrl] = await videoFile.getSignedUrl({
-    action: 'read',
-    expires: '03-01-2500', // Long expiration for demo
-});
 
-// Temporary video placeholder - to be replaced with actual video later
+// Get signed URLs for video and thumbnail
+async function getSignedUrls() {
+    try {
+        // List all files in the pics directory
+        const [files] = await bucket.getFiles({ prefix: 'pics/' });
+        console.log('Files in pics directory:', files.map(f => f.name));
+
+        // Get video URL
+        const videoFile = bucket.file('vids/rice.mov');
+        const [videoUrl] = await videoFile.getSignedUrl({
+            action: 'read',
+            expires: '03-01-2500', // Long expiration for demo
+        });
+        console.log('Video URL generated:', videoUrl);
+
+        // Get thumbnail URL - use the existing file
+        const thumbnailFile = bucket.file('pics/chips.png');
+        console.log('Checking if thumbnail exists:', await thumbnailFile.exists());
+        const [thumbnailUrl] = await thumbnailFile.getSignedUrl({
+            action: 'read',
+            expires: '03-01-2500', // Long expiration for demo
+        });
+        console.log('Thumbnail URL generated:', thumbnailUrl);
+
+        return { videoUrl, thumbnailUrl };
+    } catch (error) {
+        console.error('Error generating signed URLs:', error);
+        throw error;
+    }
+}
+
+// Get the signed URLs before creating the data
+const { videoUrl, thumbnailUrl } = await getSignedUrls();
+
+// Temporary paths - to be replaced with actual content later
 const temporaryVideoPath = videoUrl;
-const temporaryThumbnailPath = "https://storage.googleapis.com/scroll2study.firebasestorage.app/pics%2FScreenshot%202025-02-06%20at%2011.42.20.png";
+const temporaryThumbnailPath = thumbnailUrl;
 
 // Sample data
 const subjects = [

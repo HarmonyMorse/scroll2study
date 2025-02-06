@@ -119,43 +119,26 @@ struct VideoPlayerView: View {
                         .foregroundColor(.red)
                 }
             } else {
-                // Placeholder view when video is not loaded
-                AsyncImage(url: URL(string: video.metadata.thumbnailUrl)) { image in
-                    image
-                        .resizable()
-                        .aspectRatio(contentMode: .fill)
-                } placeholder: {
-                    Rectangle()
-                        .fill(Color.gray.opacity(0.3))
-                        .overlay(
-                            ProgressView()
-                        )
-                }
-                .overlay(
-                    Image(systemName: "play.circle.fill")
-                        .font(.system(size: 44))
-                        .foregroundColor(.white)
-                        .opacity(isPlaying ? 0 : 1)
+                VideoThumbnailView(
+                    thumbnailUrl: video.metadata.thumbnailUrl,
+                    onPlayTapped: {
+                        Task {
+                            await loadVideo()
+                            if let player = player {
+                                playbackManager.startPlayback(videoId: video.id, player: player)
+                            }
+                        }
+                    }
                 )
             }
         }
         .onTapGesture {
             togglePlayback()
         }
-        .task {
-            // Only load if we don't already have a player
-            if player == nil {
-                await loadVideo()
-            }
-        }
         .onChange(of: isCurrent) { newIsCurrent in
-            if newIsCurrent {
-                if let player = player {
-                    playbackManager.startPlayback(
-                        videoId: video.id, player: player, seekToStart: true)
-                }
-            } else if isPlaying {
+            if !newIsCurrent && isPlaying {
                 playbackManager.stopCurrentPlayback()
+                cleanupPlayer()  // Stop and cleanup when swiped away
             }
         }
         .onDisappear {

@@ -1,8 +1,11 @@
 import AVKit
+import FirebaseAuth
+import FirebaseFirestore
 import Foundation
 
 class VideoPlaybackManager: ObservableObject {
     static let shared = VideoPlaybackManager()
+    private let db = Firestore.firestore()
 
     @Published private(set) var currentlyPlayingVideoId: String?
     @Published private(set) var isBuffering = false
@@ -10,11 +13,35 @@ class VideoPlaybackManager: ObservableObject {
     private var timeObserver: Any?
     private var statusObserver: NSKeyValueObservation?
     private var itemEndObserver: NSObjectProtocol?
+    private let progressThreshold: Double = 0.9  // Consider video watched at 90% completion
 
     private init() {}
 
     deinit {
         removeObservers()
+    }
+
+    private func updateVideoProgress(videoId: String, currentTime: Double, totalTime: Double) {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+
+        let progress = currentTime / totalTime
+        if progress >= progressThreshold {
+            // Create or update progress document
+            let progressRef = db.collection("user_progress").document("\(userId)_\(videoId)")
+            progressRef.setData(
+                [
+                    "userId": userId,
+                    "videoId": videoId,
+                    "watchedFull": true,
+                    "lastWatchedAt": FieldValue.serverTimestamp(),
+                    "progress": progress,
+                ], merge: true
+            ) { error in
+                if let error = error {
+                    print("Error updating progress: \(error.localizedDescription)")
+                }
+            }
+        }
     }
 
     func startPlayback(videoId: String, player: AVPlayer, seekToStart: Bool = false) {
@@ -88,19 +115,23 @@ class VideoPlaybackManager: ObservableObject {
             }
         }
 
-        // Observe playback progress (for debugging or future features)
+        // Observe playback progress
         timeObserver = player.addPeriodicTimeObserver(
             forInterval: CMTime(seconds: 0.5, preferredTimescale: 600),
             queue: .main
         ) { [weak self, weak player] time in
             guard let player = player,
                 let duration = player.currentItem?.duration,
-                !duration.isIndefinite
+                !duration.isIndefinite,
+                let videoId = self?.currentlyPlayingVideoId
             else { return }
 
-            // We can use this for progress tracking if needed
             let currentTime = time.seconds
             let totalTime = duration.seconds
+
+            // Update progress in Firestore
+            self?.updateVideoProgress(
+                videoId: videoId, currentTime: currentTime, totalTime: totalTime)
 
             // Update buffering state if needed
             if let self = self {

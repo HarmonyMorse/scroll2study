@@ -1,6 +1,5 @@
 import AVFoundation
 import AVKit
-import FirebaseStorage
 import SwiftUI
 
 struct VideoPlayerView: View {
@@ -144,7 +143,10 @@ struct VideoPlayerView: View {
             togglePlayback()
         }
         .task {
-            await loadVideo()
+            // Only load if we don't already have a player
+            if player == nil {
+                await loadVideo()
+            }
         }
         .onChange(of: isCurrent) { newIsCurrent in
             if newIsCurrent {
@@ -155,6 +157,10 @@ struct VideoPlayerView: View {
             } else if isPlaying {
                 playbackManager.stopCurrentPlayback()
             }
+        }
+        .onDisappear {
+            print("DEBUG: VideoPlayerView disappeared")
+            cleanupPlayer()
         }
     }
 
@@ -170,29 +176,72 @@ struct VideoPlayerView: View {
     }
 
     private func loadVideo() async {
-        guard !video.metadata.videoUrl.isEmpty else { return }
+        guard !video.metadata.videoUrl.isEmpty else {
+            print("DEBUG: Video URL is empty")
+            return
+        }
 
+        print("DEBUG: Attempting to load video with URL: \(video.metadata.videoUrl)")
         isLoading = true
         defer { isLoading = false }
 
         do {
-            let storage = Storage.storage()
-            let videoRef = storage.reference(forURL: video.metadata.videoUrl)
-            let url = try await videoRef.downloadURL()
+            // Create player item directly with the HTTPS URL
+            guard let url = URL(string: video.metadata.videoUrl) else {
+                print("DEBUG: Failed to create URL from string: \(video.metadata.videoUrl)")
+                throw NSError(
+                    domain: "VideoPlayerView", code: -1,
+                    userInfo: [NSLocalizedDescriptionKey: "Invalid video URL"])
+            }
+
+            print("DEBUG: Successfully created URL: \(url)")
 
             // Create player item with looping configuration
             let playerItem = AVPlayerItem(url: url)
+
+            // Add observer for item status
+            NotificationCenter.default.addObserver(
+                forName: .AVPlayerItemFailedToPlayToEndTime,
+                object: playerItem,
+                queue: .main
+            ) { notification in
+                if let error = notification.userInfo?[AVPlayerItemFailedToPlayToEndTimeErrorKey]
+                    as? Error
+                {
+                    print("DEBUG: Failed to play video: \(error)")
+                }
+            }
+
+            // Observe item status
+            let statusObserver = playerItem.observe(\.status, options: [.new]) { item, _ in
+                switch item.status {
+                case .failed:
+                    if let error = item.error {
+                        print("DEBUG: Player item failed: \(error)")
+                    }
+                case .readyToPlay:
+                    print("DEBUG: Player item is ready to play")
+                case .unknown:
+                    print("DEBUG: Player item status is unknown")
+                @unknown default:
+                    break
+                }
+            }
+
+            print("DEBUG: Created player item")
 
             // Create the player
             let player = AVPlayer(playerItem: playerItem)
             player.volume = 1.0
             player.actionAtItemEnd = .none  // Prevent player from pausing at end
+            print("DEBUG: Created player")
 
             await MainActor.run {
                 self.player = player
+                print("DEBUG: Set player on main actor")
             }
         } catch {
-            print("Error loading video: \(error)")
+            print("DEBUG: Error loading video: \(error)")
             await MainActor.run {
                 self.error = error
             }
@@ -246,6 +295,12 @@ struct VideoPlayerView: View {
             player?.removeTimeObserver(observer)
             timeObserver = nil
         }
+    }
+
+    private func cleanupPlayer() {
+        removeTimeObserver()
+        playbackManager.stopCurrentPlayback()
+        player = nil
     }
 }
 

@@ -192,8 +192,36 @@ struct GridCell: View {
     var body: some View {
         VStack(alignment: .center, spacing: 16) {
             if let video = gridService.getVideo(for: subject.id, at: level.level) {
-                VideoPlayerView(video: video, isCurrent: isCurrent)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                if isCurrent {
+                    VideoPlayerView(video: video, isCurrent: true)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity)
+                        .overlay(
+                            VStack {
+                                Spacer()
+                                VStack(spacing: 8) {
+                                    Text(video.title)
+                                        .font(.headline)
+                                    Text(video.description)
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
+                                }
+                                .padding()
+                                .background(.ultraThinMaterial)
+                            }
+                        )
+                } else {
+                    // Show thumbnail for non-current cells
+                    AsyncImage(url: URL(string: video.metadata.thumbnailUrl)) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.3))
+                            .overlay(
+                                ProgressView()
+                            )
+                    }
                     .overlay(
                         VStack {
                             Spacer()
@@ -208,6 +236,7 @@ struct GridCell: View {
                             .background(.ultraThinMaterial)
                         }
                     )
+                }
             } else {
                 Spacer()
                 Image(systemName: "video.slash")

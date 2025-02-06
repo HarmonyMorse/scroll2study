@@ -12,9 +12,17 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
+// Get download URL for the video
+const bucket = admin.storage().bucket();
+const videoFile = bucket.file('vids/rice.mov');
+const [videoUrl] = await videoFile.getSignedUrl({
+    action: 'read',
+    expires: '03-01-2500', // Long expiration for demo
+});
+
 // Temporary video placeholder - to be replaced with actual video later
-const temporaryVideoPath = "gs://scroll2study.firebasestorage.app/vids/rice.mov";
-const temporaryThumbnailPath = "gs://scroll2study.firebasestorage.app/pics/Screenshot 2025-02-06 at 11.42.20.png";
+const temporaryVideoPath = videoUrl;
+const temporaryThumbnailPath = "https://storage.googleapis.com/scroll2study.firebasestorage.app/pics%2FScreenshot%202025-02-06%20at%2011.42.20.png";
 
 // Sample data
 const subjects = [

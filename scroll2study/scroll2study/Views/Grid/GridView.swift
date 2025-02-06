@@ -112,7 +112,7 @@ struct GridView: View {
                         .fontWeight(.bold)
                     Text("•")
                         .foregroundColor(.secondary)
-                    Text("Level \(level.name)")
+                    Text("Level \(level.level)")
                         .foregroundColor(.secondary)
                 }
                 .padding(.vertical, 8)

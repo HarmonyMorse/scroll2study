@@ -82,12 +82,7 @@ struct ContentView: View {
                         .tag(0)
 
                         NavigationView {
-                            VStack {
-                                Text("Coming Soon")
-                                    .font(.title)
-                                    .foregroundColor(.secondary)
-                            }
-                            .navigationTitle("My Progress")
+                            VideoProgressView()
                         }
                         .tabItem {
                             Label("Progress", systemImage: "chart.line.uptrend.xyaxis")

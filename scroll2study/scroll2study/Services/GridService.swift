@@ -21,7 +21,6 @@ public class GridService: ObservableObject {
             // Fetch subjects
             let subjectsSnapshot = try await db.collection("subjects")
                 .order(by: "order")
-                .whereField("isActive", isEqualTo: true)
                 .getDocuments()
 
             subjects = try subjectsSnapshot.documents.map { document in

@@ -12,115 +12,87 @@ if (!admin.apps.length) {
 
 const db = admin.firestore();
 
+// Temporary video placeholder - to be replaced with actual video later
+const temporaryVideoPath = "gs://scroll2study.firebasestorage.app/vids/rice.mov";
+const temporaryThumbnailPath = "gs://scroll2study.firebasestorage.app/pics/Screenshot 2025-02-06 at 11.42.20.png";
+
 // Sample data
 const subjects = [
-    {
-        id: 'math',
-        name: 'Mathematics',
-        description: 'Core mathematical concepts',
-        order: 1,
-        isActive: true
-    },
-    {
-        id: 'physics',
-        name: 'Physics',
-        description: 'Fundamental physics principles',
-        order: 2,
-        isActive: true
-    },
-    {
-        id: 'chemistry',
-        name: 'Chemistry',
-        description: 'Chemical principles and reactions',
-        order: 3,
-        isActive: true
-    },
-    {
-        id: 'biology',
-        name: 'Biology',
-        description: 'Life sciences and organisms',
-        order: 4,
-        isActive: true
-    },
-    {
-        id: 'cs',
-        name: 'Computer Science',
-        description: 'Programming and computational thinking',
-        order: 5,
-        isActive: true
+    { id: 'math', name: 'Mathematics', description: 'Core mathematical concepts', maxLevels: 15 },
+    { id: 'physics', name: 'Physics', description: 'Fundamental physics principles', maxLevels: 12 },
+    { id: 'chemistry', name: 'Chemistry', description: 'Chemical principles and reactions', maxLevels: 10 },
+    { id: 'biology', name: 'Biology', description: 'Life sciences and organisms', maxLevels: 8 },
+    { id: 'cs', name: 'Computer Science', description: 'Programming and computational thinking', maxLevels: 14 },
+    { id: 'history', name: 'History', description: 'Study of past events', maxLevels: 6 },
+    { id: 'geography', name: 'Geography', description: 'Study of places and environments', maxLevels: 4 },
+    { id: 'literature', name: 'Literature', description: 'Study of written works', maxLevels: 7 },
+    { id: 'art', name: 'Art', description: 'Visual and creative expression', maxLevels: 5 },
+    { id: 'music', name: 'Music', description: 'Study of sound and composition', maxLevels: 9 },
+    { id: 'psychology', name: 'Psychology', description: 'Study of mind and behavior', maxLevels: 11 },
+    { id: 'economics', name: 'Economics', description: 'Study of resource allocation', maxLevels: 13 },
+    { id: 'philosophy', name: 'Philosophy', description: 'Study of fundamental questions', maxLevels: 3 },
+    { id: 'linguistics', name: 'Linguistics', description: 'Study of language', maxLevels: 8 },
+    { id: 'astronomy', name: 'Astronomy', description: 'Study of celestial objects', maxLevels: 6 }
+].map((subject, index) => ({
+    ...subject,
+    order: index + 1,
+    isActive: true
+}));
+
+// Function to generate complexity levels
+function generateLevels(maxLevel) {
+    const levels = [];
+    for (let i = 1; i <= maxLevel; i++) {
+        levels.push({
+            id: `level${i}`,
+            level: i,
+            name: `Level ${i}`,
+            description: `Level ${i} concepts and applications`,
+            requirements: i === 1 ? 'None' : `Level ${i - 1} completion`,
+            order: i,
+            isActive: true
+        });
     }
-];
-
-const complexityLevels = [
-    {
-        id: 'level1',
-        level: 1,
-        name: 'Beginner',
-        description: 'Foundational concepts',
-        requirements: 'None',
-        order: 1
-    },
-    {
-        id: 'level2',
-        level: 2,
-        name: 'Intermediate',
-        description: 'Building on basics',
-        requirements: 'Level 1 completion',
-        order: 2
-    },
-    {
-        id: 'level3',
-        level: 3,
-        name: 'Advanced',
-        description: 'Complex topics and applications',
-        requirements: 'Level 2 completion',
-        order: 3
-    }
-];
-
-// Available video files from storage
-const availableVideos = [
-    'vids/RPReplay_Final1619234227.mov',
-    'vids/RPReplay_Final1621912841.mov',
-    'vids/RPReplay_Final1621912895.mov',
-    'vids/RPReplay_Final1623207673.mov',
-    'vids/RPReplay_Final1623207810.mov',
-    'vids/RPReplay_Final1623207894.mov',
-    'vids/RPReplay_Final1623207917.mov',
-    'vids/RPReplay_Final1623207960.mov',
-    'vids/RPReplay_Final1623207982.mov',
-    'vids/RPReplay_Final1623208751.mov',
-    'vids/RPReplay_Final1623475654.mov',
-    'vids/RPReplay_Final1630290820.mov',
-    'vids/RPReplay_Final1633115354.MP4',
-    'vids/RPReplay_Final1619234227 2.mov',
-    'vids/RPReplay_Final1619234227 3.mov'
-];
-
-// Function to get a random video and remove it from the array
-function getRandomVideo() {
-    const index = Math.floor(Math.random() * availableVideos.length);
-    return availableVideos.splice(index, 1)[0];
+    return levels;
 }
 
-const videos = [];
-let position = { x: 0, y: 0 };
+// Find the maximum number of levels across all subjects
+const maxLevels = Math.max(...subjects.map(subject => subject.maxLevels));
 
-// Create one video for each subject at each complexity level
+// Generate global complexity levels
+const complexityLevels = generateLevels(maxLevels);
+
+const videos = [];
+const gridCells = [];
+
+// Create grid cells and videos for each subject at their respective levels
 subjects.forEach((subject, subjectIndex) => {
-    complexityLevels.forEach((level, levelIndex) => {
-        const videoPath = getRandomVideo();
+    // Create grid cells only up to this subject's max level
+    const subjectLevels = complexityLevels.slice(0, subject.maxLevels);
+    subjectLevels.forEach((level, levelIndex) => {
+        // Create grid cell
+        gridCells.push({
+            id: `${subject.id}_${level.id}`,
+            subject: subject.id,
+            complexityLevel: level.level,
+            position: { x: subjectIndex, y: levelIndex },
+            hasVideo: true,  // Since we're only creating cells up to max level
+            isActive: true
+        });
+
+        // Create video (since we're only creating cells up to max level, all cells have videos)
         videos.push({
             id: `${subject.id}_l${level.level}`,
             title: `${subject.name} - ${level.name}`,
-            description: `${level.name} level ${subject.name} concepts`,
+            description: `${level.name} ${subject.name} concepts`,
             subject: subject.id,
             complexityLevel: level.level,
             metadata: {
                 duration: 300, // placeholder duration
                 views: 0,
-                videoUrl: `gs://scroll2study.firebasestorage.app/${videoPath}`,
-                storagePath: videoPath,
+                videoUrl: temporaryVideoPath,
+                storagePath: temporaryVideoPath,
+                thumbnailUrl: temporaryThumbnailPath,
                 createdAt: admin.firestore.FieldValue.serverTimestamp()
             },
             position: { x: subjectIndex, y: levelIndex },
@@ -134,27 +106,32 @@ async function addSampleData() {
     try {
         // Add subjects
         for (const subject of subjects) {
+            const { maxLevels, ...subjectData } = subject;  // Remove maxLevels before saving
             await db.collection('subjects').doc(subject.id).set({
-                ...subject,
+                ...subjectData,
                 createdAt: admin.firestore.FieldValue.serverTimestamp(),
                 updatedAt: admin.firestore.FieldValue.serverTimestamp()
             });
         }
         console.log('Added subjects');
 
-        // Add complexity levels
+        // Add global complexity levels
         for (const level of complexityLevels) {
-            await db.collection('complexity_levels').doc(level.id).set({
-                ...level,
-                isActive: true
-            });
+            await db.collection('complexity_levels').doc(level.id).set(level);
         }
         console.log('Added complexity levels');
+
+        // Add grid cells
+        for (const cell of gridCells) {
+            await db.collection('grid_cells').doc(cell.id).set(cell);
+            console.log(`Added grid cell: ${cell.id}`);
+        }
+        console.log('Added grid cells');
 
         // Add videos
         for (const video of videos) {
             await db.collection('videos').doc(video.id).set(video);
-            console.log(`Added video: ${video.id} with storage path: ${video.metadata.storagePath}`);
+            console.log(`Added video: ${video.id}`);
         }
         console.log('Added videos');
 

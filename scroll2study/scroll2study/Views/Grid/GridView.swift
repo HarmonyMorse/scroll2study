@@ -73,10 +73,16 @@ struct GridView: View {
         withAnimation(.easeInOut(duration: 0.3)) {
             if isScrollingHorizontally {
                 if horizontalPercentage > snapThreshold {
+                    let previousSubjectIndex = currentSubjectIndex
                     currentSubjectIndex =
                         dragDistance.x > 0
                         ? max(currentSubjectIndex - 1, 0)
                         : min(currentSubjectIndex + 1, gridService.subjects.count - 1)
+
+                    // Reset complexity level when switching to a new subject
+                    if previousSubjectIndex != currentSubjectIndex {
+                        currentLevelIndex = 0
+                    }
                 }
             } else {
                 if verticalPercentage > snapThreshold {

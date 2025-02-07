@@ -6,6 +6,7 @@ struct VideoPlayerView: View {
     let video: Video
     let isCurrent: Bool
     @StateObject private var playbackManager = VideoPlaybackManager.shared
+    @StateObject private var savedVideosManager = SavedVideosManager()
     @State private var player: AVPlayer?
     @State private var isLoading = false
     @State private var error: Error?
@@ -13,6 +14,7 @@ struct VideoPlayerView: View {
     @State private var currentTime: Double = 0
     @State private var duration: Double = 0
     @State private var timeObserver: Any?
+    @State private var showProgressBar = false
     private let availableSpeeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
 
     private var progress: Double {
@@ -51,57 +53,154 @@ struct VideoPlayerView: View {
                         }
                     )
                     .overlay(
-                        VStack(spacing: 8) {
-                            // Progress bar at the top
-                            GeometryReader { geometry in
-                                VStack(spacing: 0) {
-                                    ZStack(alignment: .leading) {
-                                        Rectangle()
-                                            .fill(Color.gray.opacity(0.3))
-                                            .frame(height: 3)
+                        HStack(alignment: .bottom) {
+                            // Left side vertical button stack
+                            VStack(spacing: 20) {
+                                Spacer()
 
-                                        Rectangle()
-                                            .fill(Color.white)
-                                            .frame(
-                                                width: geometry.size.width * progress,
-                                                height: 3
-                                            )
+                                // Progress bar toggle button
+                                Button(action: { showProgressBar.toggle() }) {
+                                    VStack(spacing: 4) {
+                                        Image(
+                                            systemName: showProgressBar ? "timer" : "timer.circle"
+                                        )
+                                        .font(.system(size: 28))
+                                        .foregroundColor(.white)
+                                        .frame(width: 44, height: 44)
+                                        .background(Color.black.opacity(0.4))
+                                        .clipShape(Circle())
+
+                                        Text(showProgressBar ? "Hide" : "Time")
+                                            .font(.caption2)
+                                            .foregroundColor(.white)
                                     }
-                                    .gesture(
-                                        DragGesture(minimumDistance: 0)
-                                            .onChanged { value in
-                                                if duration > 0 {
-                                                    let percentage =
-                                                        value.location.x / geometry.size.width
-                                                    let time =
-                                                        duration
-                                                        * Double(max(0, min(1, percentage)))
-                                                    player.seek(
-                                                        to: CMTime(
-                                                            seconds: time, preferredTimescale: 600))
+                                }
+                                .overlay(alignment: .trailing) {
+                                    if showProgressBar {
+                                        // Progress popup
+                                        HStack(spacing: 12) {
+                                            // Progress bar
+                                            GeometryReader { geometry in
+                                                ZStack(alignment: .leading) {
+                                                    // Background track
+                                                    Capsule()
+                                                        .fill(Color.white.opacity(0.3))
+                                                        .frame(height: 4)
+
+                                                    // Progress track
+                                                    Capsule()
+                                                        .fill(Color.white)
+                                                        .frame(
+                                                            width: geometry.size.width * progress,
+                                                            height: 4)
+
+                                                    // Drag handle
+                                                    Circle()
+                                                        .fill(Color.white)
+                                                        .frame(width: 12, height: 12)
+                                                        .position(
+                                                            x: max(
+                                                                6,
+                                                                min(
+                                                                    geometry.size.width * progress,
+                                                                    geometry.size.width - 6)), y: 2)
                                                 }
+                                                .gesture(
+                                                    DragGesture(minimumDistance: 0)
+                                                        .onChanged { value in
+                                                            if duration > 0 {
+                                                                let percentage =
+                                                                    value.location.x
+                                                                    / geometry.size.width
+                                                                let time =
+                                                                    duration
+                                                                    * Double(
+                                                                        max(0, min(1, percentage)))
+                                                                player.seek(
+                                                                    to: CMTime(
+                                                                        seconds: time,
+                                                                        preferredTimescale: 600))
+                                                            }
+                                                        }
+                                                )
                                             }
-                                    )
+                                            .frame(width: 120, height: 20)
+
+                                            // Time display
+                                            Text(
+                                                "\(formatTime(currentTime)) / \(formatTime(duration))"
+                                            )
+                                            .font(.caption)
+                                            .foregroundColor(.white)
+                                        }
+                                        .padding(.horizontal, 16)
+                                        .padding(.vertical, 12)
+                                        .background(Color.black.opacity(0.8))
+                                        .cornerRadius(20)
+                                        .offset(x: 180, y: 0)
+                                        .transition(.opacity)
+                                    }
+                                }
+
+                                // Save button
+                                Button(action: { toggleSaveVideo() }) {
+                                    VStack(spacing: 4) {
+                                        Image(
+                                            systemName: savedVideosManager.isVideoSaved(video.id)
+                                                ? "bookmark.fill" : "bookmark"
+                                        )
+                                        .font(.system(size: 28))
+                                        .foregroundColor(.white)
+                                        .frame(width: 44, height: 44)
+                                        .background(Color.black.opacity(0.4))
+                                        .clipShape(Circle())
+
+                                        Text(
+                                            savedVideosManager.isVideoSaved(video.id)
+                                                ? "Saved" : "Save"
+                                        )
+                                        .font(.caption2)
+                                        .foregroundColor(.white)
+                                    }
+                                }
+
+                                // Speed button
+                                Button(action: { showSpeedPicker.toggle() }) {
+                                    VStack(spacing: 4) {
+                                        Image(systemName: "speedometer")
+                                            .font(.system(size: 28))
+                                            .foregroundColor(.white)
+                                            .frame(width: 44, height: 44)
+                                            .background(Color.black.opacity(0.4))
+                                            .clipShape(Circle())
+
+                                        Text("\(String(format: "%.1fx", player.rate))")
+                                            .font(.caption2)
+                                            .foregroundColor(.white)
+                                    }
                                 }
                             }
-                            .frame(height: 3)
-                            .padding(.top, 8)  // Add some padding from the top edge
+                            .padding(.leading, 16)
+                            .padding(.bottom, 80)  // Extra padding for tab bar
 
                             Spacer()
 
-                            // Speed button at the bottom
-                            HStack {
+                            // Right side progress info
+                            VStack(alignment: .trailing) {
                                 Spacer()
-                                Button(action: { showSpeedPicker.toggle() }) {
-                                    Image(systemName: "speedometer")
-                                        .font(.title2)
+                                if showProgressBar {
+                                    Text("\(formatTime(currentTime)) / \(formatTime(duration))")
+                                        .font(.caption)
                                         .foregroundColor(.white)
-                                        .padding(8)
-                                        .background(Color.black.opacity(0.6))
-                                        .clipShape(Circle())
+                                        .padding(.trailing, 16)
+                                        .padding(.bottom, 80)
                                 }
-                                .padding()
                             }
+                        }
+                    )
+                    .overlay(
+                        VStack(spacing: 0) {
+                            Spacer()  // Just keep this empty to remove the old progress bar
                         }
                     )
                     .sheet(isPresented: $showSpeedPicker) {
@@ -131,6 +230,9 @@ struct VideoPlayerView: View {
                     }
                 )
             }
+        }
+        .safeAreaInset(edge: .bottom) {  // Add safe area inset for tab bar
+            Color.clear.frame(height: 0)
         }
         .onTapGesture {
             togglePlayback()
@@ -284,6 +386,40 @@ struct VideoPlayerView: View {
         removeTimeObserver()
         playbackManager.stopCurrentPlayback()
         player = nil
+    }
+
+    private func toggleSaveVideo() {
+        Task {
+            do {
+                if savedVideosManager.isVideoSaved(video.id) {
+                    try await savedVideosManager.removeVideo(withId: video.id)
+                } else {
+                    let savedVideo = SavedVideo(
+                        id: video.id,
+                        title: video.title,
+                        thumbnailURL: video.metadata.thumbnailUrl,
+                        videoURL: video.metadata.videoUrl,
+                        savedAt: Date(),
+                        duration: duration,
+                        subject: video.subject
+                    )
+                    try await savedVideosManager.saveVideo(savedVideo)
+                }
+            } catch {
+                print("Error toggling video save state: \(error)")
+            }
+        }
+    }
+
+    // Add this helper function for formatting time
+    private func formatTime(_ timeInSeconds: Double) -> String {
+        guard !timeInSeconds.isNaN && timeInSeconds.isFinite else {
+            return "0:00"
+        }
+        let totalSeconds = Int(max(0, timeInSeconds))
+        let minutes = totalSeconds / 60
+        let seconds = totalSeconds % 60
+        return String(format: "%d:%02d", minutes, seconds)
     }
 }
 

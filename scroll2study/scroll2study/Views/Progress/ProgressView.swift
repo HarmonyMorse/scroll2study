@@ -64,6 +64,7 @@ struct VideoProgressView: View {
     @StateObject private var viewModel = ProgressViewModel()
     @State private var contentSize: CGSize = .zero
     @State private var containerSize: CGSize = .zero
+    @State private var scrollPosition: CGPoint = .zero
 
     // 9:16 aspect ratio for video thumbnails (portrait)
     private let cellWidth: CGFloat = 45
@@ -71,20 +72,7 @@ struct VideoProgressView: View {
     private let labelWidth: CGFloat = 50
     private let horizontalSpacing: CGFloat = 8
     private let verticalSpacing: CGFloat = 12
-
-    private var needsHorizontalScroll: Bool {
-        let totalWidth =
-            labelWidth + horizontalSpacing + CGFloat(viewModel.subjects.count)
-            * (cellWidth + horizontalSpacing)
-        return totalWidth > containerSize.width
-    }
-
-    private var needsVerticalScroll: Bool {
-        let totalHeight =
-            40  // Header height
-            + CGFloat(viewModel.complexityLevels.count) * (cellHeight + verticalSpacing)
-        return totalHeight > containerSize.height
-    }
+    private let headerHeight: CGFloat = 40
 
     private func progressCell(for subject: Subject, level: ComplexityLevel) -> some View {
         let isWatched = viewModel.progressMap[subject.id]?[level.level] ?? false
@@ -114,94 +102,116 @@ struct VideoProgressView: View {
 
     var body: some View {
         GeometryReader { geometry in
-            ScrollView(
-                [
-                    needsHorizontalScroll ? .horizontal : [],
-                    needsVerticalScroll ? .vertical : [],
-                ], showsIndicators: true
-            ) {
+            if viewModel.isLoading {
+                SwiftUI.ProgressView()
+            } else if let error = viewModel.error {
                 VStack {
-                    Spacer()
-                    HStack {
-                        Spacer()
-                        if viewModel.isLoading {
-                            SwiftUI.ProgressView()
-                        } else if let error = viewModel.error {
-                            VStack {
-                                Text("Error loading progress")
-                                    .font(.headline)
-                                Text(error.localizedDescription)
-                                    .font(.subheadline)
-                                    .foregroundColor(.red)
-                            }
-                        } else {
-                            VStack(alignment: .leading, spacing: verticalSpacing) {
-                                // Header row with subject names
-                                HStack(alignment: .top, spacing: horizontalSpacing) {
-                                    // Empty cell for complexity level labels
-                                    Rectangle()
-                                        .fill(Color.clear)
-                                        .frame(width: labelWidth)
+                    Text("Error loading progress")
+                        .font(.headline)
+                    Text(error.localizedDescription)
+                        .font(.subheadline)
+                        .foregroundColor(.red)
+                }
+            } else {
+                ZStack(alignment: .topLeading) {
+                    // Main scrollable content
+                    ScrollView([.horizontal, .vertical], showsIndicators: true) {
+                        VStack(alignment: .leading, spacing: verticalSpacing) {
+                            // Spacer for top header
+                            Color.clear.frame(height: headerHeight)
 
-                                    // Subject headers
+                            // Grid content
+                            ForEach(viewModel.complexityLevels) { level in
+                                HStack(spacing: horizontalSpacing) {
+                                    // Spacer for left header
+                                    Color.clear.frame(width: labelWidth + horizontalSpacing)
+
+                                    // Progress cells
+                                    ForEach(viewModel.subjects) { subject in
+                                        progressCell(for: subject, level: level)
+                                    }
+                                }
+                                .padding(.vertical, 4)
+                            }
+                        }
+                        .padding(.horizontal, horizontalSpacing)
+                        .background(
+                            GeometryReader { proxy in
+                                Color.clear.onChange(of: proxy.frame(in: .named("scroll"))) {
+                                    frame in
+                                    scrollPosition = CGPoint(
+                                        x: frame.minX,
+                                        y: frame.minY
+                                    )
+                                }
+                            }
+                        )
+                    }
+                    .coordinateSpace(name: "scroll")
+
+                    // Fixed position headers
+                    Group {
+                        // Top header (subjects) - full width, fixed height
+                        VStack {
+                            HStack(spacing: horizontalSpacing) {
+                                Color.clear.frame(width: labelWidth + horizontalSpacing)
+
+                                HStack(spacing: horizontalSpacing) {
                                     ForEach(viewModel.subjects) { subject in
                                         Text(subject.name)
                                             .font(.caption2)
                                             .frame(width: cellWidth)
+                                            .frame(height: headerHeight)
                                             .multilineTextAlignment(.center)
                                             .lineLimit(2)
                                     }
                                 }
+                            }
+                            .frame(height: headerHeight)
+                            .background(Color(UIColor.systemBackground))
+                            .offset(x: scrollPosition.x)
 
-                                // Grid rows
+                            Spacer()
+                        }
+                        .zIndex(2)
+
+                        // Left header (levels) - fixed width, full height
+                        HStack {
+                            VStack(alignment: .trailing, spacing: verticalSpacing) {
+                                Color.clear.frame(height: headerHeight)
+
                                 ForEach(viewModel.complexityLevels) { level in
-                                    HStack(spacing: horizontalSpacing) {
-                                        // Complexity level label
-                                        Text("Level \(level.name)")
-                                            .font(.caption2)
-                                            .foregroundColor(.secondary)
-                                            .frame(width: labelWidth)
-                                            .multilineTextAlignment(.trailing)
-
-                                        // Progress cells
-                                        ForEach(viewModel.subjects) { subject in
-                                            progressCell(for: subject, level: level)
-                                        }
-                                    }
-                                    .padding(.vertical, 4)
+                                    Text("Level \(level.name)")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                        .frame(width: labelWidth)
+                                        .frame(height: cellHeight)
+                                        .multilineTextAlignment(.trailing)
+                                        .padding(.vertical, 4)
                                 }
                             }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
+                            .frame(width: labelWidth + horizontalSpacing)
+                            .background(Color(UIColor.systemBackground))
+                            .offset(y: scrollPosition.y)
+
+                            Spacer()
                         }
-                        Spacer()
+                        .zIndex(1)
                     }
-                    Spacer()
                 }
-                .frame(
-                    minWidth: needsHorizontalScroll ? nil : geometry.size.width,
-                    minHeight: needsVerticalScroll ? nil : geometry.size.height
-                )
-                .background(
-                    GeometryReader { contentGeometry in
-                        Color.clear.preference(
-                            key: SizePreferenceKey.self,
-                            value: contentGeometry.size
-                        )
-                    }
-                )
-            }
-            .onPreferenceChange(SizePreferenceKey.self) { size in
-                contentSize = size
-            }
-            .onAppear {
-                containerSize = geometry.size
             }
         }
-        .navigationTitle("My Progress")
         .task {
             await viewModel.fetchData()
         }
+    }
+}
+
+// Preference key for tracking scroll offset
+struct ScrollOffsetPreferenceKey: PreferenceKey {
+    static var defaultValue: CGPoint = .zero
+    static func reduce(value: inout CGPoint, nextValue: () -> CGPoint) {
+        value = nextValue()
     }
 }
 

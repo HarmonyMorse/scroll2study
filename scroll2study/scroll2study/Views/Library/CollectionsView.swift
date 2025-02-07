@@ -9,55 +9,94 @@ struct CollectionsView: View {
 
     var body: some View {
         List {
-            ForEach(viewModel.collections) { collection in
-                NavigationLink {
-                    CollectionDetailView(viewModel: viewModel, collection: collection)
-                } label: {
-                    HStack {
-                        if !collection.thumbnailUrl.isEmpty {
-                            AsyncImage(url: URL(string: collection.thumbnailUrl)) { image in
-                                image
-                                    .resizable()
-                                    .aspectRatio(contentMode: .fill)
-                            } placeholder: {
+            if viewModel.collections.isEmpty {
+                Section {
+                    VStack(spacing: 12) {
+                        Image(systemName: "folder.badge.plus")
+                            .font(.system(size: 50))
+                            .foregroundColor(.gray)
+                        Text("No Collections Yet")
+                            .font(.headline)
+                        Text("Create your first collection to organize your study materials")
+                            .font(.subheadline)
+                            .foregroundColor(.secondary)
+                            .multilineTextAlignment(.center)
+                        Button(action: { showingNewCollectionSheet = true }) {
+                            Text("Create Collection")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding()
+                                .background(Color.blue)
+                                .cornerRadius(10)
+                        }
+                        .padding(.top)
+                    }
+                    .padding()
+                    .frame(maxWidth: .infinity)
+                }
+            } else {
+                ForEach(viewModel.collections) { collection in
+                    NavigationLink(
+                        destination: CollectionDetailView(
+                            viewModel: viewModel, collection: collection)
+                    ) {
+                        HStack(spacing: 16) {
+                            // Collection Thumbnail
+                            if !collection.thumbnailUrl.isEmpty {
+                                AsyncImage(url: URL(string: collection.thumbnailUrl)) { image in
+                                    image
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                } placeholder: {
+                                    Rectangle()
+                                        .fill(Color.gray.opacity(0.2))
+                                        .overlay(
+                                            Image(systemName: "folder.fill")
+                                                .foregroundColor(.gray)
+                                        )
+                                }
+                                .frame(width: 80, height: 60)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                            } else {
                                 Rectangle()
                                     .fill(Color.gray.opacity(0.2))
+                                    .frame(width: 80, height: 60)
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
                                     .overlay(
                                         Image(systemName: "folder.fill")
                                             .foregroundColor(.gray)
                                     )
                             }
-                            .frame(width: 60, height: 40)
-                            .clipShape(RoundedRectangle(cornerRadius: 4))
-                        } else {
-                            Rectangle()
-                                .fill(Color.gray.opacity(0.2))
-                                .frame(width: 60, height: 40)
-                                .clipShape(RoundedRectangle(cornerRadius: 4))
-                                .overlay(
-                                    Image(systemName: "folder.fill")
-                                        .foregroundColor(.gray)
-                                )
-                        }
 
-                        VStack(alignment: .leading) {
-                            Text(collection.name)
-                                .font(.headline)
-                            let videos = viewModel.getVideosForCollection(collection)
-                            Text("\(videos.count) videos")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                            // Collection Info
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(collection.name)
+                                    .font(.headline)
+                                let videos = viewModel.getVideosForCollection(collection)
+                                Text("\(videos.count) videos")
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
+                                if !collection.description.isEmpty {
+                                    Text(collection.description)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                        .lineLimit(2)
+                                }
+                            }
                         }
-                        .padding(.leading, 8)
+                        .padding(.vertical, 8)
                     }
                 }
             }
         }
-        .navigationTitle("Collections")
+        .navigationTitle("My Collections")
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button(action: { showingNewCollectionSheet = true }) {
-                    Image(systemName: "folder.badge.plus")
+            if !viewModel.collections.isEmpty {
+                ToolbarItem(placement: .primaryAction) {
+                    Button(action: { showingNewCollectionSheet = true }) {
+                        Image(systemName: "folder.badge.plus")
+                    }
                 }
             }
         }

@@ -45,9 +45,9 @@ class LibraryViewModel: ObservableObject {
         }
 
         // Subscribe to collectionsManager updates
-        if let collections = collectionsManager?.collections {
-            self.collections = collections
-        }
+        collectionsManager?.$collections
+            .receive(on: RunLoop.main)
+            .assign(to: &$collections)
     }
 
     private func setupUserListener() {

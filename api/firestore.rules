@@ -35,6 +35,16 @@ service cloud.firestore {
              ('completedVideos' in stats ? stats.completedVideos is number : true) &&
              ('lastLoginAt' in stats ? stats.lastLoginAt is timestamp : true);
     }
+
+    function isValidCollection(data) {
+      return data.keys().hasAll(['name', 'description', 'thumbnailUrl', 'videoIds', 'createdAt', 'updatedAt']) &&
+             data.name is string &&
+             data.description is string &&
+             data.thumbnailUrl is string &&
+             data.videoIds is list &&
+             data.createdAt is timestamp &&
+             data.updatedAt is timestamp;
+    }
     
     // Public read access for educational content
     match /subjects/{document} {
@@ -79,6 +89,14 @@ service cloud.firestore {
       match /savedVideos/{videoId} {
         allow read: if isOwner(userId);
         allow create, update: if isOwner(userId);
+        allow delete: if isOwner(userId);
+      }
+
+      // Collections subcollection
+      match /collections/{collectionId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId) && isValidCollection(request.resource.data);
+        allow update: if isOwner(userId) && isValidCollection(request.resource.data);
         allow delete: if isOwner(userId);
       }
     }

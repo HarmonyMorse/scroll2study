@@ -1,4 +1,5 @@
 import AVKit
+import FirebaseAuth
 import FirebaseFirestore
 import SwiftUI
 
@@ -13,9 +14,11 @@ struct GridView: View {
     @State private var dragStartLocation: CGPoint = .zero
     @State private var isScrollingHorizontally = false
     @State private var offset: CGSize = .zero
+    @State private var user: User?
 
     // Percentage of screen width/height needed to trigger a snap
     private let snapThreshold: CGFloat = 0.2
+    private let userService = UserService.shared
 
     private var currentSubject: Subject? {
         guard !gridService.subjects.isEmpty else { return nil }
@@ -25,6 +28,25 @@ struct GridView: View {
     private var currentLevel: ComplexityLevel? {
         guard !gridService.complexityLevels.isEmpty else { return nil }
         return gridService.complexityLevels[currentLevelIndex]
+    }
+
+    private func loadUserPreferences() async {
+        guard let currentUser = Auth.auth().currentUser else { return }
+        do {
+            if let userData = try await userService.getUser(id: currentUser.uid) {
+                user = userData
+                // Adjust currentLevelIndex based on user's preferred level
+                if !gridService.complexityLevels.isEmpty {
+                    let preferredLevel = userData.preferences.preferredLevel
+                    currentLevelIndex =
+                        gridService.complexityLevels.firstIndex { level in
+                            level.level == preferredLevel
+                        } ?? 0
+                }
+            }
+        } catch {
+            print("Error loading user preferences: \(error.localizedDescription)")
+        }
     }
 
     private func gridCell(
@@ -79,9 +101,15 @@ struct GridView: View {
                         ? max(currentSubjectIndex - 1, 0)
                         : min(currentSubjectIndex + 1, gridService.subjects.count - 1)
 
-                    // Reset complexity level when switching to a new subject
-                    if previousSubjectIndex != currentSubjectIndex {
-                        currentLevelIndex = 0
+                    // Reset to user's preferred level when switching subjects
+                    if previousSubjectIndex != currentSubjectIndex,
+                        let preferredLevel = user?.preferences.preferredLevel,
+                        !gridService.complexityLevels.isEmpty
+                    {
+                        currentLevelIndex =
+                            gridService.complexityLevels.firstIndex { level in
+                                level.level == preferredLevel
+                            } ?? 0
                     }
                 }
             } else {
@@ -178,6 +206,7 @@ struct GridView: View {
         .edgesIgnoringSafeArea(.all)
         .task {
             await gridService.fetchGridData()
+            await loadUserPreferences()
         }
     }
 }

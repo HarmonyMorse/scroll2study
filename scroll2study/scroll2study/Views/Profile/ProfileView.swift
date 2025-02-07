@@ -51,6 +51,16 @@ struct ProfileView: View {
                     .padding(.vertical, 8)
                 }
 
+                Section("Learning Preferences") {
+                    HStack {
+                        Image(systemName: "graduationcap")
+                        Text("Preferred Level")
+                        Spacer()
+                        Text(levelDescription(for: user.preferences.preferredLevel))
+                            .foregroundColor(.secondary)
+                    }
+                }
+
                 Section("Statistics") {
                     HStack {
                         Image(systemName: "clock")
@@ -168,6 +178,23 @@ struct ProfileView: View {
         formatter.allowedUnits = [.hour, .minute]
         formatter.unitsStyle = .abbreviated
         return formatter.string(from: timeInterval) ?? "0m"
+    }
+
+    private func levelDescription(for level: Int) -> String {
+        switch level {
+        case 1:
+            return "Beginner"
+        case 2:
+            return "Elementary"
+        case 3:
+            return "Intermediate"
+        case 4:
+            return "Advanced"
+        case 5:
+            return "Expert"
+        default:
+            return "Level \(level)"
+        }
     }
 }
 

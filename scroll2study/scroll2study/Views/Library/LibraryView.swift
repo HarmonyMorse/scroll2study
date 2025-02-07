@@ -40,9 +40,9 @@ class LibraryViewModel: ObservableObject {
         setupProgressListener()
 
         // Subscribe to savedVideosManager updates
-        if let videos = savedVideosManager?.savedVideos {
-            savedVideos = videos
-        }
+        savedVideosManager?.$savedVideos
+            .receive(on: RunLoop.main)
+            .assign(to: &$savedVideos)
 
         // Subscribe to collectionsManager updates
         collectionsManager?.$collections

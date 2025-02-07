@@ -19,6 +19,7 @@ struct VideoPlayerView: View {
     @State private var duration: Double = 0
     @State private var timeObserver: Any?
     @State private var showProgressBar = false
+    @State private var hasBeenWatched = false  // Track if video has been watched
     private let availableSpeeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
 
     private var progress: Double {
@@ -95,6 +96,7 @@ struct VideoPlayerView: View {
                                                     // Progress track
                                                     Capsule()
                                                         .fill(Color.white)
+                                                        .opacity(hasBeenWatched ? 1.0 : 0.3)
                                                         .frame(
                                                             width: geometry.size.width * progress,
                                                             height: 3
@@ -106,6 +108,7 @@ struct VideoPlayerView: View {
                                                     // Drag handle
                                                     Circle()
                                                         .fill(Color.white)
+                                                        .opacity(hasBeenWatched ? 1.0 : 0.3)
                                                         .frame(width: 12, height: 12)
                                                         .shadow(
                                                             color: .black.opacity(0.3), radius: 2
@@ -122,6 +125,7 @@ struct VideoPlayerView: View {
                                                 .gesture(
                                                     DragGesture(minimumDistance: 0)
                                                         .onChanged { value in
+                                                            guard hasBeenWatched else { return }  // Prevent seeking if not watched
                                                             if duration > 0 {
                                                                 let percentage =
                                                                     value.location.x
@@ -293,6 +297,11 @@ struct VideoPlayerView: View {
             // Create player item with looping configuration
             let playerItem = AVPlayerItem(url: url)
 
+            // Set initial duration if available
+            if playerItem.status == .readyToPlay {
+                self.duration = playerItem.duration.seconds
+            }
+
             // Add observer for item status
             NotificationCenter.default.addObserver(
                 forName: .AVPlayerItemFailedToPlayToEndTime,
@@ -315,6 +324,9 @@ struct VideoPlayerView: View {
                     }
                 case .readyToPlay:
                     print("DEBUG: Player item is ready to play")
+                    Task { @MainActor in
+                        self.duration = item.duration.seconds
+                    }
                 case .unknown:
                     print("DEBUG: Player item status is unknown")
                 @unknown default:
@@ -360,15 +372,35 @@ struct VideoPlayerView: View {
 
         // Update initial duration
         if let currentItem = player.currentItem {
-            duration = currentItem.duration.seconds
+            // Try to get duration immediately
+            let itemDuration = currentItem.duration
+            if !itemDuration.isIndefinite && itemDuration.isValid {
+                duration = itemDuration.seconds
+            }
 
-            // Observe duration changes (in case it wasn't initially available)
+            // Observe duration changes
             NotificationCenter.default.addObserver(
                 forName: .AVPlayerItemDidPlayToEndTime,
                 object: currentItem,
                 queue: .main
             ) { _ in
-                if let duration = player.currentItem?.duration.seconds {
+                let duration = player.currentItem?.duration.seconds ?? 0
+                if duration > 0 {
+                    Task { @MainActor in
+                        self.duration = duration
+                        self.hasBeenWatched = true  // Mark as watched when video completes
+                    }
+                }
+            }
+
+            // Also observe when duration becomes available
+            NotificationCenter.default.addObserver(
+                forName: .AVPlayerItemTimeJumped,
+                object: currentItem,
+                queue: .main
+            ) { _ in
+                let duration = currentItem.duration.seconds
+                if !duration.isNaN && duration > 0 {
                     Task { @MainActor in
                         self.duration = duration
                     }

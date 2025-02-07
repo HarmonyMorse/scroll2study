@@ -90,12 +90,20 @@ struct ContentView: View {
                         .tag(1)
 
                         NavigationView {
+                            LibraryView()
+                        }
+                        .tabItem {
+                            Label("Library", systemImage: "books.vertical")
+                        }
+                        .tag(2)
+
+                        NavigationView {
                             ProfileView()
                         }
                         .tabItem {
                             Label("Profile", systemImage: "person.circle")
                         }
-                        .tag(2)
+                        .tag(3)
                     }
                     .onAppear {
                         // Set tab bar background to solid white

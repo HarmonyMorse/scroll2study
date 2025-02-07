@@ -13,10 +13,12 @@ struct EditProfileView: View {
     @State private var notifications: Bool
     @State private var autoplay: Bool
     @State private var preferredLanguage: String
+    @State private var preferredLevel: Int
     @State private var showError = false
     @State private var errorMessage: String?
 
     private let userService = UserService.shared
+    private let availableLevels = Array(1...15)  // Support up to 15 levels
 
     init(user: User, onUpdate: @escaping (User) -> Void) {
         self.user = user
@@ -26,6 +28,7 @@ struct EditProfileView: View {
         _notifications = State(initialValue: user.settings.notifications)
         _autoplay = State(initialValue: user.settings.autoplay)
         _preferredLanguage = State(initialValue: user.settings.preferredLanguage)
+        _preferredLevel = State(initialValue: user.preferences.preferredLevel)
     }
 
     var body: some View {
@@ -35,6 +38,14 @@ struct EditProfileView: View {
                     TextField("Display Name", text: $displayName)
                     TextField("Bio", text: $bio, axis: .vertical)
                         .lineLimit(3...6)
+                }
+
+                Section("Learning Preferences") {
+                    Picker("Preferred Level", selection: $preferredLevel) {
+                        ForEach(availableLevels, id: \.self) { level in
+                            Text(levelDescription(for: level)).tag(level)
+                        }
+                    }
                 }
 
                 Section("Settings") {
@@ -75,12 +86,19 @@ struct EditProfileView: View {
         }
     }
 
+    private func levelDescription(for level: Int) -> String {
+        return "Level \(level)"
+    }
+
     private func saveChanges() {
         var updatedUser = user
 
         // Update profile
         updatedUser.profile.displayName = displayName
         updatedUser.profile.bio = bio
+
+        // Update preferences
+        updatedUser.preferences.preferredLevel = preferredLevel
 
         // Update settings
         updatedUser.settings.notifications = notifications

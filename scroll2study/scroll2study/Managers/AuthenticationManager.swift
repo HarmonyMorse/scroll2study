@@ -2,14 +2,26 @@ import FirebaseAuth
 import FirebaseCore
 import SwiftUI
 
-// MARK: - Rate Limiting
-enum RateLimitError: LocalizedError {
+// MARK: - Authentication Errors
+enum AuthError: LocalizedError {
     case tooManyAttempts(remainingSeconds: Int)
+    case authenticationFailed
+    case userDocumentCreationFailed
+    case networkError
+    case unknown(String)
 
     var errorDescription: String? {
         switch self {
         case .tooManyAttempts(let seconds):
             return "Too many attempts. Please try again in \(seconds) seconds."
+        case .authenticationFailed:
+            return "Invalid email or password. Please check your credentials and try again."
+        case .userDocumentCreationFailed:
+            return "Failed to create your user profile. Please try again."
+        case .networkError:
+            return "Network error. Please check your connection and try again."
+        case .unknown(let message):
+            return message
         }
     }
 }
@@ -53,6 +65,10 @@ class AuthenticationManager: ObservableObject {
                                 self.user = nil
                                 self.isAuthenticated = false
                                 self.authenticationState = .unauthenticated
+                                NotificationCenter.default.post(
+                                    name: .init("AuthError"),
+                                    object: AuthError.authenticationFailed
+                                )
                             }
                         } catch {
                             // Error fetching user document, sign out
@@ -60,6 +76,10 @@ class AuthenticationManager: ObservableObject {
                             self.user = nil
                             self.isAuthenticated = false
                             self.authenticationState = .unauthenticated
+                            NotificationCenter.default.post(
+                                name: .init("AuthError"),
+                                object: AuthError.networkError
+                            )
                         }
                     } else {
                         self.user = nil
@@ -101,7 +121,7 @@ extension AuthenticationManager {
         if recentAttempts.count >= maxAttempts {
             if let oldestAttempt = recentAttempts.first {
                 let remainingSeconds = Int(timeWindow - now.timeIntervalSince(oldestAttempt.date))
-                throw RateLimitError.tooManyAttempts(remainingSeconds: remainingSeconds)
+                throw AuthError.tooManyAttempts(remainingSeconds: remainingSeconds)
             }
         }
 
@@ -123,13 +143,27 @@ extension AuthenticationManager {
 
             // Check if user document exists, create if it doesn't
             if try await userService.getUser(id: result.user.uid) == nil {
-                try await userService.createUserDocument(user: result.user)
+                do {
+                    try await userService.createUserDocument(user: result.user)
+                } catch {
+                    throw AuthError.userDocumentCreationFailed
+                }
             }
 
             return result.user
-        } catch {
-            // Keep the failed attempt recorded
+        } catch let error as AuthError {
             throw error
+        } catch let error as NSError {
+            switch error.code {
+            case AuthErrorCode.wrongPassword.rawValue,
+                AuthErrorCode.invalidEmail.rawValue,
+                AuthErrorCode.userNotFound.rawValue:
+                throw AuthError.authenticationFailed
+            case AuthErrorCode.networkError.rawValue:
+                throw AuthError.networkError
+            default:
+                throw AuthError.authenticationFailed
+            }
         }
     }
 
@@ -139,22 +173,55 @@ extension AuthenticationManager {
 
         do {
             let result = try await Auth.auth().createUser(withEmail: email, password: password)
+
             // Create user document in Firestore
-            try await userService.createUserDocument(user: result.user)
+            do {
+                try await userService.createUserDocument(user: result.user)
+            } catch {
+                // If document creation fails, delete the auth user and throw error
+                try? await result.user.delete()
+                throw AuthError.userDocumentCreationFailed
+            }
+
             // Clear attempts on successful sign up
             authAttempts.removeAll { $0.email == email }
             return result.user
-        } catch {
-            // Keep the failed attempt recorded
+        } catch let error as AuthError {
             throw error
+        } catch let error as NSError {
+            switch error.code {
+            case AuthErrorCode.emailAlreadyInUse.rawValue,
+                AuthErrorCode.invalidEmail.rawValue,
+                AuthErrorCode.weakPassword.rawValue:
+                throw AuthError.authenticationFailed
+            case AuthErrorCode.networkError.rawValue:
+                throw AuthError.networkError
+            default:
+                throw AuthError.authenticationFailed
+            }
         }
     }
 
     func signInAnonymously() async throws -> FirebaseAuth.User {
-        let result = try await Auth.auth().signInAnonymously()
-        // Create user document in Firestore for anonymous users
-        try await userService.createUserDocument(user: result.user)
-        return result.user
+        do {
+            let result = try await Auth.auth().signInAnonymously()
+            // Create user document in Firestore
+            do {
+                try await userService.createUserDocument(user: result.user)
+            } catch {
+                // If document creation fails, delete the auth user and throw error
+                try? await result.user.delete()
+                throw AuthError.userDocumentCreationFailed
+            }
+            return result.user
+        } catch let error as AuthError {
+            throw error
+        } catch let error as NSError {
+            if error.code == AuthErrorCode.networkError.rawValue {
+                throw AuthError.networkError
+            }
+            throw AuthError.authenticationFailed
+        }
     }
 
     func signOut() throws {

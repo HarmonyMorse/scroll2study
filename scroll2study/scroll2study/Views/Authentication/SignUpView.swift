@@ -11,6 +11,7 @@ struct SignUpView: View {
     @State private var isEmailValid = true
     @State private var passwordValidation: (isValid: Bool, message: String?) = (true, nil)
     @State private var showPasswordRequirements = false
+    @State private var isLoading = false
 
     var body: some View {
         VStack(spacing: 20) {
@@ -19,6 +20,7 @@ struct SignUpView: View {
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .textContentType(.emailAddress)
                 .autocapitalization(.none)
+                .disabled(isLoading)
                 .onChange(of: email) { newValue in
                     isEmailValid = ValidationUtils.isValidEmail(newValue)
                 }
@@ -42,6 +44,7 @@ struct SignUpView: View {
             SecureField("Password", text: $password)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .textContentType(.newPassword)
+                .disabled(isLoading)
                 .onChange(of: password) { newValue in
                     passwordValidation = ValidationUtils.isValidPassword(newValue)
                     showPasswordRequirements = !newValue.isEmpty
@@ -97,21 +100,29 @@ struct SignUpView: View {
             SecureField("Confirm Password", text: $confirmPassword)
                 .textFieldStyle(RoundedBorderTextFieldStyle())
                 .textContentType(.newPassword)
+                .disabled(isLoading)
 
             // Sign Up button
             Button(action: signUp) {
-                Text("Sign Up")
-                    .frame(maxWidth: .infinity)
-                    .padding()
-                    .background(isValidForm ? Color.blue : Color.gray)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
+                if isLoading {
+                    ProgressView()
+                        .progressViewStyle(CircularProgressViewStyle(tint: .white))
+                } else {
+                    Text("Sign Up")
+                }
             }
-            .disabled(!isValidForm)
+            .frame(maxWidth: .infinity)
+            .padding()
+            .background(isValidForm ? Color.blue : Color.gray)
+            .foregroundColor(.white)
+            .cornerRadius(10)
+            .disabled(!isValidForm || isLoading)
         }
         .padding(.horizontal)
         .alert("Error", isPresented: $showError) {
-            Button("OK", role: .cancel) {}
+            Button("OK", role: .cancel) {
+                isLoading = false
+            }
         } message: {
             Text(errorMessage)
         }
@@ -133,20 +144,26 @@ struct SignUpView: View {
     }
 
     private func signUp() {
+        isLoading = true
         Task {
             do {
                 try ValidationUtils.validateEmail(email)
                 try ValidationUtils.validatePassword(password)
-                authManager.authenticationState = .authenticating
                 _ = try await authManager.signUp(email: email, password: password)
+                // If we get here, sign up was successful
+                isLoading = false
             } catch let error as ValidationError {
                 showError = true
                 errorMessage = error.localizedDescription
-                authManager.authenticationState = .unauthenticated
-            } catch {
+                isLoading = false
+            } catch let error as AuthError {
                 showError = true
                 errorMessage = error.localizedDescription
-                authManager.authenticationState = .unauthenticated
+                isLoading = false
+            } catch {
+                showError = true
+                errorMessage = "An unexpected error occurred. Please try again."
+                isLoading = false
             }
         }
     }

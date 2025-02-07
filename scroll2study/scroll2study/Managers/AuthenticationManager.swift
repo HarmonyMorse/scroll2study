@@ -37,10 +37,35 @@ class AuthenticationManager: ObservableObject {
     private func setupAuthStateHandler() {
         if authStateHandler == nil {
             authStateHandler = Auth.auth().addStateDidChangeListener { [weak self] _, user in
-                DispatchQueue.main.async {
-                    self?.user = user
-                    self?.isAuthenticated = user != nil
-                    self?.authenticationState = user != nil ? .authenticated : .unauthenticated
+                guard let self = self else { return }
+
+                Task { @MainActor in
+                    if let user = user {
+                        // Check if user document exists
+                        do {
+                            if (try await self.userService.getUser(id: user.uid)) != nil {
+                                self.user = user
+                                self.isAuthenticated = true
+                                self.authenticationState = .authenticated
+                            } else {
+                                // No user document found, sign out
+                                try? Auth.auth().signOut()
+                                self.user = nil
+                                self.isAuthenticated = false
+                                self.authenticationState = .unauthenticated
+                            }
+                        } catch {
+                            // Error fetching user document, sign out
+                            try? Auth.auth().signOut()
+                            self.user = nil
+                            self.isAuthenticated = false
+                            self.authenticationState = .unauthenticated
+                        }
+                    } else {
+                        self.user = nil
+                        self.isAuthenticated = false
+                        self.authenticationState = .unauthenticated
+                    }
                 }
             }
         }
@@ -95,6 +120,12 @@ extension AuthenticationManager {
             let result = try await Auth.auth().signIn(withEmail: email, password: password)
             // Clear attempts on successful sign in
             authAttempts.removeAll { $0.email == email }
+
+            // Check if user document exists, create if it doesn't
+            if try await userService.getUser(id: result.user.uid) == nil {
+                try await userService.createUserDocument(user: result.user)
+            }
+
             return result.user
         } catch {
             // Keep the failed attempt recorded

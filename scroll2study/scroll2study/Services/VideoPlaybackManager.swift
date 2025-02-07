@@ -6,6 +6,7 @@ import Foundation
 class VideoPlaybackManager: ObservableObject {
     static let shared = VideoPlaybackManager()
     private let db = Firestore.firestore()
+    private let userService = UserService.shared
 
     @Published private(set) var currentlyPlayingVideoId: String?
     @Published private(set) var isBuffering = false
@@ -13,12 +14,16 @@ class VideoPlaybackManager: ObservableObject {
     private var timeObserver: Any?
     private var statusObserver: NSKeyValueObservation?
     private var itemEndObserver: NSObjectProtocol?
+    private var lastUpdateTime: Date?
+    private var accumulatedWatchTime: TimeInterval = 0
     private let progressThreshold: Double = 0.9  // Consider video watched at 90% completion
+    private let watchTimeUpdateInterval: TimeInterval = 30  // Update watch time every 30 seconds
 
     private init() {}
 
     deinit {
         removeObservers()
+        updateTotalWatchTime()
     }
 
     private func updateVideoProgress(videoId: String, currentTime: Double, totalTime: Double) {
@@ -42,6 +47,36 @@ class VideoPlaybackManager: ObservableObject {
                 }
             }
         }
+
+        // Update accumulated watch time
+        if let lastUpdate = lastUpdateTime {
+            let timeElapsed = Date().timeIntervalSince(lastUpdate)
+            accumulatedWatchTime += timeElapsed
+
+            // Update total watch time in Firestore periodically
+            if accumulatedWatchTime >= watchTimeUpdateInterval {
+                updateTotalWatchTime()
+            }
+        }
+        lastUpdateTime = Date()
+    }
+
+    private func updateTotalWatchTime() {
+        guard accumulatedWatchTime > 0,
+            let userId = Auth.auth().currentUser?.uid
+        else { return }
+
+        Task {
+            do {
+                if var user = try await userService.getUser(id: userId) {
+                    user.stats.totalWatchTime += accumulatedWatchTime
+                    try await userService.updateUser(user)
+                    accumulatedWatchTime = 0
+                }
+            } catch {
+                print("Error updating total watch time: \(error.localizedDescription)")
+            }
+        }
     }
 
     func startPlayback(videoId: String, player: AVPlayer, seekToStart: Bool = false) {
@@ -51,6 +86,8 @@ class VideoPlaybackManager: ObservableObject {
         // Start new playback
         currentlyPlayingVideoId = videoId
         currentPlayer = player
+        lastUpdateTime = Date()
+        accumulatedWatchTime = 0
 
         // Only seek to start if explicitly requested (e.g., when changing videos)
         if seekToStart {
@@ -68,12 +105,16 @@ class VideoPlaybackManager: ObservableObject {
     }
 
     func stopCurrentPlayback() {
+        // Update total watch time before stopping
+        updateTotalWatchTime()
+
         // Don't seek to start when pausing
         currentPlayer?.pause()
         removeObservers()
         currentPlayer = nil
         currentlyPlayingVideoId = nil
         isBuffering = false
+        lastUpdateTime = nil
 
         if let observer = itemEndObserver {
             NotificationCenter.default.removeObserver(observer)

@@ -171,7 +171,7 @@ struct VideoProgressView: View {
                             Color.clear.frame(height: headerHeight)
 
                             ForEach(viewModel.complexityLevels) { level in
-                                Text("Level \(level.name)")
+                                Text("Level \(level.level)")
                                     .font(.caption2)
                                     .foregroundColor(.secondary)
                                     .frame(width: labelWidth)

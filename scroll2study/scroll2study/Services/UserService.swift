@@ -91,4 +91,17 @@ class UserService {
                 "updatedAt": Timestamp(date: Date()),
             ])
     }
+
+    func updateUserStats(userId: String, stats: User.Stats) async throws {
+        try await db.collection("users")
+            .document(userId)
+            .updateData([
+                "stats": [
+                    "totalWatchTime": stats.totalWatchTime,
+                    "completedVideos": stats.completedVideos,
+                    "lastLoginAt": Timestamp(date: stats.lastLoginAt),
+                ],
+                "updatedAt": Timestamp(date: Date()),
+            ])
+    }
 }

@@ -68,9 +68,10 @@ class VideoPlaybackManager: ObservableObject {
 
         Task {
             do {
-                if var user = try await userService.getUser(id: userId) {
-                    user.stats.totalWatchTime += accumulatedWatchTime
-                    try await userService.updateUser(user)
+                if let user = try await userService.getUser(id: userId) {
+                    var updatedStats = user.stats
+                    updatedStats.totalWatchTime += accumulatedWatchTime
+                    try await userService.updateUserStats(userId: userId, stats: updatedStats)
                     accumulatedWatchTime = 0
                 }
             } catch {

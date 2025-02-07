@@ -1,3 +1,5 @@
+import FirebaseAuth
+import FirebaseFirestore
 import SwiftUI
 import os
 
@@ -5,6 +7,62 @@ private let logger = Logger(
     subsystem: Bundle.main.bundleIdentifier ?? "scroll2study",
     category: "LibraryView"
 )
+
+@MainActor
+class LibraryViewModel: ObservableObject {
+    @Published var savedVideos: [SavedVideo] = []
+    @Published var totalWatchTime: TimeInterval = 0
+    @Published var showTimeInHours = true
+    @Published var error: Error?
+
+    private let userService = UserService.shared
+    private var savedVideosManager: SavedVideosManager?
+
+    init() {
+        setupManagers()
+    }
+
+    private func setupManagers() {
+        savedVideosManager = SavedVideosManager()
+        loadUserData()
+
+        // Subscribe to savedVideosManager updates
+        if let videos = savedVideosManager?.savedVideos {
+            savedVideos = videos
+        }
+    }
+
+    func loadUserData() {
+        Task {
+            guard let currentUser = Auth.auth().currentUser else { return }
+            do {
+                if let userData = try await userService.getUser(id: currentUser.uid) {
+                    self.totalWatchTime = userData.stats.totalWatchTime
+                }
+            } catch {
+                self.error = error
+            }
+        }
+    }
+
+    func toggleTimeDisplay() {
+        showTimeInHours.toggle()
+    }
+
+    func formatWatchTime() -> String {
+        if showTimeInHours {
+            let hours = Int(totalWatchTime / 3600)
+            return "\(hours)"
+        } else {
+            let minutes = Int(totalWatchTime / 60)
+            return "\(minutes)"
+        }
+    }
+
+    var watchTimeUnit: String {
+        showTimeInHours ? "Hours" : "Minutes"
+    }
+}
 
 struct SavedVideoCard: View {
     let video: SavedVideo
@@ -78,7 +136,7 @@ struct LibrarySection<Content: View>: View {
 }
 
 struct LibraryView: View {
-    @StateObject private var savedVideosManager = SavedVideosManager()
+    @StateObject private var viewModel = LibraryViewModel()
     @State private var showingError = false
 
     var body: some View {
@@ -107,9 +165,9 @@ struct LibraryView: View {
                 LibrarySection(
                     title: "Saved Videos",
                     icon: "bookmark.fill",
-                    count: savedVideosManager.savedVideos.count
+                    count: viewModel.savedVideos.count
                 ) {
-                    ForEach(savedVideosManager.savedVideos) { video in
+                    ForEach(viewModel.savedVideos) { video in
                         SavedVideoCard(video: video)
                     }
                 }
@@ -178,10 +236,19 @@ struct LibraryView: View {
                         .padding(.horizontal)
 
                     HStack(spacing: 20) {
-                        StatBox(title: "Hours", value: "12", icon: "clock.fill")
                         StatBox(
-                            title: "Videos", value: "\(savedVideosManager.savedVideos.count)",
-                            icon: "play.square.fill")
+                            title: viewModel.watchTimeUnit,
+                            value: viewModel.formatWatchTime(),
+                            icon: "clock.fill"
+                        )
+                        .onTapGesture {
+                            viewModel.toggleTimeDisplay()
+                        }
+                        StatBox(
+                            title: "Videos",
+                            value: "\(viewModel.savedVideos.count)",
+                            icon: "play.square.fill"
+                        )
                         StatBox(title: "Subjects", value: "5", icon: "folder.fill")
                     }
                     .padding(.horizontal)
@@ -194,9 +261,9 @@ struct LibraryView: View {
                 showingError = false
             }
         } message: {
-            Text(savedVideosManager.error?.localizedDescription ?? "An unknown error occurred")
+            Text(viewModel.error?.localizedDescription ?? "An unknown error occurred")
         }
-        .onReceive(savedVideosManager.$error) { error in
+        .onReceive(viewModel.$error) { error in
             showingError = error != nil
         }
     }

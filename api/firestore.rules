@@ -27,6 +27,14 @@ service cloud.firestore {
       let unchangeableFields = ['id', 'createdAt', 'role'];
       return !request.resource.data.diff(resource.data).affectedKeys().hasAny(unchangeableFields);
     }
+
+    function isValidStatsUpdate(data) {
+      let stats = data.stats;
+      return stats is map && 
+             ('totalWatchTime' in stats ? stats.totalWatchTime is number : true) &&
+             ('completedVideos' in stats ? stats.completedVideos is number : true) &&
+             ('lastLoginAt' in stats ? stats.lastLoginAt is timestamp : true);
+    }
     
     // Public read access for educational content
     match /subjects/{document} {
@@ -53,10 +61,17 @@ service cloud.firestore {
                    isValidUserData(request.resource.data) &&
                    request.resource.data.id == userId;
       
-      allow update: if isOwner(userId) && 
-                   isValidUserData(request.resource.data) &&
+      allow update: if isOwner(userId) && (
+                   // Allow full document updates
+                   (isValidUserData(request.resource.data) &&
                    isValidUserUpdate(request.resource.data) &&
-                   request.resource.data.updatedAt > resource.data.updatedAt;
+                   request.resource.data.updatedAt > resource.data.updatedAt)
+                   ||
+                   // Allow partial stats updates
+                   (request.resource.data.keys().hasOnly(['stats', 'updatedAt']) &&
+                   isValidStatsUpdate(request.resource.data) &&
+                   request.resource.data.updatedAt > resource.data.updatedAt)
+                   );
       
       allow delete: if false;  // Prevent user deletion (handled by admin)
 

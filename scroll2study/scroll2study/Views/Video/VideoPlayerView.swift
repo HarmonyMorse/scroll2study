@@ -1,7 +1,11 @@
 import AVFoundation
 import AVKit
+import FirebaseAuth  // For Auth.auth()
+// Local imports
+import FirebaseFirestore  // For SavedVideo
 import SwiftUI
 
+// Reference types from our app
 struct VideoPlayerView: View {
     let video: Video
     let isCurrent: Bool
@@ -31,11 +35,9 @@ struct VideoPlayerView: View {
             if let player = player {
                 CustomVideoPlayer(player: player)
                     .onAppear {
-                        configureAudioSession()
-                        setupTimeObserver()
-                        if isCurrent && !isPlaying {
-                            playbackManager.startPlayback(videoId: video.id, player: player)
-                        }
+                        // Configure video player settings
+                        player.play()
+                        setupTimeObserver()  // Add time observer to track progress
                     }
                     .onDisappear {
                         removeTimeObserver()
@@ -78,33 +80,45 @@ struct VideoPlayerView: View {
                                 .overlay(alignment: .trailing) {
                                     if showProgressBar {
                                         // Progress popup
-                                        HStack(spacing: 12) {
+                                        HStack(spacing: 16) {
                                             // Progress bar
                                             GeometryReader { geometry in
                                                 ZStack(alignment: .leading) {
                                                     // Background track
                                                     Capsule()
                                                         .fill(Color.white.opacity(0.3))
-                                                        .frame(height: 4)
+                                                        .frame(height: 3)
+                                                        .frame(
+                                                            maxHeight: .infinity, alignment: .center
+                                                        )
 
                                                     // Progress track
                                                     Capsule()
                                                         .fill(Color.white)
                                                         .frame(
                                                             width: geometry.size.width * progress,
-                                                            height: 4)
+                                                            height: 3
+                                                        )
+                                                        .frame(
+                                                            maxHeight: .infinity, alignment: .center
+                                                        )
 
                                                     // Drag handle
                                                     Circle()
                                                         .fill(Color.white)
                                                         .frame(width: 12, height: 12)
+                                                        .shadow(
+                                                            color: .black.opacity(0.3), radius: 2
+                                                        )
                                                         .position(
                                                             x: max(
                                                                 6,
                                                                 min(
                                                                     geometry.size.width * progress,
-                                                                    geometry.size.width - 6)), y: 2)
+                                                                    geometry.size.width - 6)),
+                                                            y: geometry.size.height / 2)
                                                 }
+                                                .frame(height: 24)
                                                 .gesture(
                                                     DragGesture(minimumDistance: 0)
                                                         .onChanged { value in
@@ -124,21 +138,27 @@ struct VideoPlayerView: View {
                                                         }
                                                 )
                                             }
-                                            .frame(width: 120, height: 20)
+                                            .frame(width: 140, height: 24)
 
                                             // Time display
                                             Text(
                                                 "\(formatTime(currentTime)) / \(formatTime(duration))"
                                             )
-                                            .font(.caption)
+                                            .font(.system(size: 12, weight: .medium))
                                             .foregroundColor(.white)
+                                            .monospacedDigit()
                                         }
-                                        .padding(.horizontal, 16)
-                                        .padding(.vertical, 12)
-                                        .background(Color.black.opacity(0.8))
-                                        .cornerRadius(20)
-                                        .offset(x: 180, y: 0)
-                                        .transition(.opacity)
+                                        .padding(.horizontal, 12)
+                                        .padding(.vertical, 8)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 16)
+                                                .fill(Color.black.opacity(0.85))
+                                                .shadow(
+                                                    color: .black.opacity(0.2), radius: 8, x: 0,
+                                                    y: 4)
+                                        )
+                                        .offset(x: 160, y: 0)
+                                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
                                     }
                                 }
 
@@ -246,17 +266,6 @@ struct VideoPlayerView: View {
         .onDisappear {
             print("DEBUG: VideoPlayerView disappeared")
             cleanupPlayer()
-        }
-    }
-
-    private func configureAudioSession() {
-        do {
-            try AVAudioSession.sharedInstance().setCategory(
-                .playback, mode: .moviePlayback, options: [.allowAirPlay, .allowBluetooth])
-            try AVAudioSession.sharedInstance().setActive(
-                true, options: .notifyOthersOnDeactivation)
-        } catch {
-            print("Failed to configure audio session: \(error)")
         }
     }
 
@@ -447,7 +456,9 @@ struct SpeedPickerView: View {
                 }
             }
             .navigationTitle("Playback Speed")
-            .navigationBarTitleDisplayMode(.inline)
+            #if os(iOS)
+                .navigationBarTitleDisplayMode(.inline)
+            #endif
             .toolbar {
                 ToolbarItem(placement: .navigationBarTrailing) {
                     Button("Done") {

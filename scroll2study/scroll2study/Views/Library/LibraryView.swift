@@ -17,19 +17,44 @@ class LibraryViewModel: ObservableObject {
 
     private let userService = UserService.shared
     private var savedVideosManager: SavedVideosManager?
+    private var userListener: ListenerRegistration?
 
     init() {
         setupManagers()
     }
 
+    deinit {
+        userListener?.remove()
+    }
+
     private func setupManagers() {
         savedVideosManager = SavedVideosManager()
-        loadUserData()
+        setupUserListener()
 
         // Subscribe to savedVideosManager updates
         if let videos = savedVideosManager?.savedVideos {
             savedVideos = videos
         }
+    }
+
+    private func setupUserListener() {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+
+        userListener = Firestore.firestore()
+            .collection("users")
+            .document(userId)
+            .addSnapshotListener { [weak self] snapshot, error in
+                guard let self = self else { return }
+
+                if let error = error {
+                    self.error = error
+                    return
+                }
+
+                if let userData = snapshot.flatMap({ User(from: $0) }) {
+                    self.totalWatchTime = userData.stats.totalWatchTime
+                }
+            }
     }
 
     func loadUserData() {

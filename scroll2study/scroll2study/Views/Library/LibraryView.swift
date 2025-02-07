@@ -366,29 +366,58 @@ struct LibraryView: View {
                 }
                 .padding(.horizontal)
 
-                // Completed Videos
-                LibrarySection(
-                    title: "Completed Videos",
-                    icon: "checkmark.circle.fill",
-                    count: viewModel.completedVideos.count
-                ) {
-                    ForEach(viewModel.completedVideos) { video in
-                        CompletedVideoCard(video: video, viewModel: viewModel)
+                // Study Stats
+                VStack(alignment: .leading, spacing: 12) {
+                    Label("Study Statistics", systemImage: "chart.bar.fill")
+                        .font(.headline)
+                        .padding(.horizontal)
+
+                    HStack(spacing: 20) {
+                        StatBox(
+                            title: viewModel.watchTimeUnit,
+                            value: viewModel.formatWatchTime(),
+                            icon: "clock.fill"
+                        )
+                        .onTapGesture {
+                            viewModel.toggleTimeDisplay()
+                        }
+                        StatBox(
+                            title: "Videos",
+                            value: "\(viewModel.completedVideos.count)",
+                            icon: "play.square.fill"
+                        )
+                        StatBox(title: "Subjects", value: "5", icon: "folder.fill")
                     }
+                    .padding(.horizontal)
                 }
 
-                // Continue Watching
-                LibrarySection(title: "Continue Watching", icon: "play.circle", count: 3) {
-                    ForEach(0..<3) { _ in
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.gray.opacity(0.2))
-                            .frame(width: 160, height: 90)
-                            .overlay(
-                                Image(systemName: "play.circle.fill")
-                                    .foregroundColor(.gray)
-                                    .font(.largeTitle)
-                            )
+                // Recent Achievements
+                HStack {
+                    Label("Recent Achievements", systemImage: "star.fill")
+                        .font(.headline)
+                    Spacer()
+                    Text("View All")
+                        .foregroundColor(.blue)
+                }
+                .padding(.horizontal)
+
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 15) {
+                        ForEach(0..<3) { _ in
+                            VStack {
+                                Circle()
+                                    .fill(Color.yellow.opacity(0.2))
+                                    .frame(width: 60, height: 60)
+                                    .overlay(
+                                        Image(systemName: "star.fill")
+                                            .foregroundColor(.yellow)
+                                    )
+                                Text("Study Streak")
+                                    .font(.caption)
+                            }
+                        }
                     }
+                    .padding(.horizontal)
                 }
 
                 // Saved Videos
@@ -430,58 +459,29 @@ struct LibraryView: View {
                     }
                 }
 
-                // Recent Achievements
-                HStack {
-                    Label("Recent Achievements", systemImage: "star.fill")
-                        .font(.headline)
-                    Spacer()
-                    Text("View All")
-                        .foregroundColor(.blue)
-                }
-                .padding(.horizontal)
-
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 15) {
-                        ForEach(0..<3) { _ in
-                            VStack {
-                                Circle()
-                                    .fill(Color.yellow.opacity(0.2))
-                                    .frame(width: 60, height: 60)
-                                    .overlay(
-                                        Image(systemName: "star.fill")
-                                            .foregroundColor(.yellow)
-                                    )
-                                Text("Study Streak")
-                                    .font(.caption)
-                            }
-                        }
+                // Continue Watching
+                LibrarySection(title: "Continue Watching", icon: "play.circle", count: 3) {
+                    ForEach(0..<3) { _ in
+                        RoundedRectangle(cornerRadius: 8)
+                            .fill(Color.gray.opacity(0.2))
+                            .frame(width: 160, height: 90)
+                            .overlay(
+                                Image(systemName: "play.circle.fill")
+                                    .foregroundColor(.gray)
+                                    .font(.largeTitle)
+                            )
                     }
-                    .padding(.horizontal)
                 }
 
-                // Study Stats
-                VStack(alignment: .leading, spacing: 12) {
-                    Label("Study Statistics", systemImage: "chart.bar.fill")
-                        .font(.headline)
-                        .padding(.horizontal)
-
-                    HStack(spacing: 20) {
-                        StatBox(
-                            title: viewModel.watchTimeUnit,
-                            value: viewModel.formatWatchTime(),
-                            icon: "clock.fill"
-                        )
-                        .onTapGesture {
-                            viewModel.toggleTimeDisplay()
-                        }
-                        StatBox(
-                            title: "Videos",
-                            value: "\(viewModel.completedVideos.count)",
-                            icon: "play.square.fill"
-                        )
-                        StatBox(title: "Subjects", value: "5", icon: "folder.fill")
+                // Completed Videos
+                LibrarySection(
+                    title: "Completed Videos",
+                    icon: "checkmark.circle.fill",
+                    count: viewModel.completedVideos.count
+                ) {
+                    ForEach(viewModel.completedVideos) { video in
+                        CompletedVideoCard(video: video, viewModel: viewModel)
                     }
-                    .padding(.horizontal)
                 }
             }
             .padding(.vertical)

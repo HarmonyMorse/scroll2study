@@ -88,6 +88,14 @@ struct ContentView: View {
                             Label("Progress", systemImage: "chart.line.uptrend.xyaxis")
                         }
                         .tag(1)
+
+                        NavigationView {
+                            ProfileView()
+                        }
+                        .tabItem {
+                            Label("Profile", systemImage: "person.circle")
+                        }
+                        .tag(2)
                     }
                     .onAppear {
                         // Set tab bar background to solid white

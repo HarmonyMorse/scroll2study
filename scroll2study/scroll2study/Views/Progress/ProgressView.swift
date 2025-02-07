@@ -113,91 +113,80 @@ struct VideoProgressView: View {
                         .foregroundColor(.red)
                 }
             } else {
-                ZStack(alignment: .topLeading) {
-                    // Main scrollable content
-                    ScrollView([.horizontal, .vertical], showsIndicators: true) {
-                        VStack(alignment: .leading, spacing: verticalSpacing) {
-                            // Spacer for top header
-                            Color.clear.frame(height: headerHeight)
+                ScrollView([.horizontal, .vertical], showsIndicators: true) {
+                    VStack(alignment: .leading, spacing: verticalSpacing) {
+                        Color.clear.frame(height: headerHeight)
 
-                            // Grid content
-                            ForEach(viewModel.complexityLevels) { level in
-                                HStack(spacing: horizontalSpacing) {
-                                    // Spacer for left header
-                                    Color.clear.frame(width: labelWidth + horizontalSpacing)
-
-                                    // Progress cells
-                                    ForEach(viewModel.subjects) { subject in
-                                        progressCell(for: subject, level: level)
-                                    }
-                                }
-                                .padding(.vertical, 4)
-                            }
-                        }
-                        .padding(.horizontal, horizontalSpacing)
-                        .background(
-                            GeometryReader { proxy in
-                                Color.clear.onChange(of: proxy.frame(in: .named("scroll"))) {
-                                    frame in
-                                    scrollPosition = CGPoint(
-                                        x: frame.minX,
-                                        y: frame.minY
-                                    )
-                                }
-                            }
-                        )
-                    }
-                    .coordinateSpace(name: "scroll")
-
-                    // Fixed position headers
-                    Group {
-                        // Top header (subjects) - full width, fixed height
-                        VStack {
+                        ForEach(viewModel.complexityLevels) { level in
                             HStack(spacing: horizontalSpacing) {
                                 Color.clear.frame(width: labelWidth + horizontalSpacing)
 
-                                HStack(spacing: horizontalSpacing) {
-                                    ForEach(viewModel.subjects) { subject in
-                                        Text(subject.name)
-                                            .font(.caption2)
-                                            .frame(width: cellWidth)
-                                            .frame(height: headerHeight)
-                                            .multilineTextAlignment(.center)
-                                            .lineLimit(2)
-                                    }
+                                ForEach(viewModel.subjects) { subject in
+                                    progressCell(for: subject, level: level)
                                 }
                             }
-                            .frame(height: headerHeight)
-                            .background(Color(UIColor.systemBackground))
-                            .offset(x: scrollPosition.x)
-
-                            Spacer()
+                            .padding(.vertical, 4)
                         }
-                        .zIndex(2)
-
-                        // Left header (levels) - fixed width, full height
-                        HStack {
-                            VStack(alignment: .trailing, spacing: verticalSpacing) {
-                                Color.clear.frame(height: headerHeight)
-
-                                ForEach(viewModel.complexityLevels) { level in
-                                    Text("Level \(level.name)")
-                                        .font(.caption2)
-                                        .foregroundColor(.secondary)
-                                        .frame(width: labelWidth)
-                                        .frame(height: cellHeight)
-                                        .multilineTextAlignment(.trailing)
-                                        .padding(.vertical, 4)
-                                }
-                            }
-                            .frame(width: labelWidth + horizontalSpacing)
-                            .background(Color(UIColor.systemBackground))
-                            .offset(y: scrollPosition.y)
-
-                            Spacer()
-                        }
-                        .zIndex(1)
                     }
+                    .padding(.horizontal, horizontalSpacing)
+                    .background(
+                        GeometryReader { proxy in
+                            Color.clear.onChange(of: proxy.frame(in: .named("scroll"))) { frame in
+                                scrollPosition = CGPoint(
+                                    x: frame.minX,
+                                    y: frame.minY
+                                )
+                            }
+                        }
+                    )
+                }
+                .coordinateSpace(name: "scroll")
+
+                Group {
+                    VStack {
+                        HStack(spacing: horizontalSpacing) {
+                            Color.clear.frame(width: labelWidth + horizontalSpacing)
+
+                            HStack(spacing: horizontalSpacing) {
+                                ForEach(viewModel.subjects) { subject in
+                                    Text(subject.name)
+                                        .font(.caption2)
+                                        .frame(width: cellWidth)
+                                        .frame(height: headerHeight)
+                                        .multilineTextAlignment(.center)
+                                        .lineLimit(2)
+                                }
+                            }
+                        }
+                        .frame(height: headerHeight)
+                        .background(Color(UIColor.systemBackground))
+                        .offset(x: scrollPosition.x)
+
+                        Spacer()
+                    }
+                    .zIndex(2)
+
+                    HStack {
+                        VStack(alignment: .trailing, spacing: verticalSpacing) {
+                            Color.clear.frame(height: headerHeight)
+
+                            ForEach(viewModel.complexityLevels) { level in
+                                Text("Level \(level.name)")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                    .frame(width: labelWidth)
+                                    .frame(height: cellHeight)
+                                    .multilineTextAlignment(.trailing)
+                                    .padding(.vertical, 4)
+                            }
+                        }
+                        .frame(width: labelWidth + horizontalSpacing)
+                        .background(Color(UIColor.systemBackground))
+                        .offset(y: scrollPosition.y)
+
+                        Spacer()
+                    }
+                    .zIndex(1)
                 }
             }
         }

@@ -14,132 +14,130 @@ struct ProfileView: View {
     private let userService = UserService.shared
 
     var body: some View {
-        NavigationView {
-            List {
-                if let user = user {
-                    Section {
-                        HStack {
-                            if let url = URL(string: user.profile.avatarUrl),
-                                !user.profile.avatarUrl.isEmpty
-                            {
-                                AsyncImage(url: url) { image in
-                                    image
-                                        .resizable()
-                                        .scaledToFill()
-                                } placeholder: {
-                                    Image(systemName: "person.circle.fill")
-                                        .resizable()
-                                }
-                                .frame(width: 60, height: 60)
-                                .clipShape(Circle())
-                            } else {
+        List {
+            if let user = user {
+                Section {
+                    HStack {
+                        if let url = URL(string: user.profile.avatarUrl),
+                            !user.profile.avatarUrl.isEmpty
+                        {
+                            AsyncImage(url: url) { image in
+                                image
+                                    .resizable()
+                                    .scaledToFill()
+                            } placeholder: {
                                 Image(systemName: "person.circle.fill")
                                     .resizable()
-                                    .frame(width: 60, height: 60)
-                                    .foregroundColor(.gray)
                             }
+                            .frame(width: 60, height: 60)
+                            .clipShape(Circle())
+                        } else {
+                            Image(systemName: "person.circle.fill")
+                                .resizable()
+                                .frame(width: 60, height: 60)
+                                .foregroundColor(.gray)
+                        }
 
-                            VStack(alignment: .leading) {
-                                Text(user.profile.displayName)
-                                    .font(.headline)
-                                if !user.profile.bio.isEmpty {
-                                    Text(user.profile.bio)
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                }
+                        VStack(alignment: .leading) {
+                            Text(user.profile.displayName)
+                                .font(.headline)
+                            if !user.profile.bio.isEmpty {
+                                Text(user.profile.bio)
+                                    .font(.subheadline)
+                                    .foregroundColor(.secondary)
                             }
                         }
-                        .padding(.vertical, 8)
+                    }
+                    .padding(.vertical, 8)
+                }
+
+                Section("Statistics") {
+                    HStack {
+                        Image(systemName: "clock")
+                        Text("Total Watch Time")
+                        Spacer()
+                        Text(formatDuration(user.stats.totalWatchTime))
                     }
 
-                    Section("Statistics") {
+                    HStack {
+                        Image(systemName: "checkmark.circle")
+                        Text("Completed Videos")
+                        Spacer()
+                        Text("\(user.stats.completedVideos)")
+                    }
+                }
+
+                Section("Settings") {
+                    Toggle(isOn: .constant(user.settings.notifications)) {
                         HStack {
-                            Image(systemName: "clock")
-                            Text("Total Watch Time")
-                            Spacer()
-                            Text(formatDuration(user.stats.totalWatchTime))
+                            Image(systemName: "bell")
+                            Text("Notifications")
                         }
+                    }
 
+                    Toggle(isOn: .constant(user.settings.autoplay)) {
                         HStack {
-                            Image(systemName: "checkmark.circle")
-                            Text("Completed Videos")
-                            Spacer()
-                            Text("\(user.stats.completedVideos)")
+                            Image(systemName: "play.circle")
+                            Text("Autoplay")
                         }
                     }
 
-                    Section("Settings") {
-                        Toggle(isOn: .constant(user.settings.notifications)) {
-                            HStack {
-                                Image(systemName: "bell")
-                                Text("Notifications")
-                            }
-                        }
+                    HStack {
+                        Image(systemName: "globe")
+                        Text("Language")
+                        Spacer()
+                        Text(user.settings.preferredLanguage.uppercased())
+                    }
+                }
 
-                        Toggle(isOn: .constant(user.settings.autoplay)) {
-                            HStack {
-                                Image(systemName: "play.circle")
-                                Text("Autoplay")
-                            }
-                        }
-
+                Section {
+                    Button(role: .destructive, action: { showingSignOutAlert = true }) {
                         HStack {
-                            Image(systemName: "globe")
-                            Text("Language")
                             Spacer()
-                            Text(user.settings.preferredLanguage.uppercased())
+                            Text("Sign Out")
+                            Spacer()
                         }
                     }
-
-                    Section {
-                        Button(role: .destructive, action: { showingSignOutAlert = true }) {
-                            HStack {
-                                Spacer()
-                                Text("Sign Out")
-                                Spacer()
-                            }
-                        }
-                    }
-                } else {
-                    ProgressView()
+                }
+            } else {
+                ProgressView()
+            }
+        }
+        .navigationTitle("Profile")
+        .toolbar {
+            if user != nil {
+                Button("Edit") {
+                    isEditingProfile = true
                 }
             }
-            .navigationTitle("Profile")
-            .toolbar {
-                if user != nil {
-                    Button("Edit") {
-                        isEditingProfile = true
-                    }
+        }
+        .refreshable {
+            await loadUserData()
+        }
+        .alert("Sign Out", isPresented: $showingSignOutAlert) {
+            Button("Cancel", role: .cancel) {}
+            Button("Sign Out", role: .destructive) {
+                signOut()
+            }
+        } message: {
+            Text("Are you sure you want to sign out?")
+        }
+        .alert("Error", isPresented: $showError) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            if let errorMessage = errorMessage {
+                Text(errorMessage)
+            }
+        }
+        .sheet(isPresented: $isEditingProfile) {
+            if let user = user {
+                EditProfileView(user: user) { updatedUser in
+                    self.user = updatedUser
                 }
             }
-            .refreshable {
-                await loadUserData()
-            }
-            .alert("Sign Out", isPresented: $showingSignOutAlert) {
-                Button("Cancel", role: .cancel) {}
-                Button("Sign Out", role: .destructive) {
-                    signOut()
-                }
-            } message: {
-                Text("Are you sure you want to sign out?")
-            }
-            .alert("Error", isPresented: $showError) {
-                Button("OK", role: .cancel) {}
-            } message: {
-                if let errorMessage = errorMessage {
-                    Text(errorMessage)
-                }
-            }
-            .sheet(isPresented: $isEditingProfile) {
-                if let user = user {
-                    EditProfileView(user: user) { updatedUser in
-                        self.user = updatedUser
-                    }
-                }
-            }
-            .task {
-                await loadUserData()
-            }
+        }
+        .task {
+            await loadUserData()
         }
     }
 

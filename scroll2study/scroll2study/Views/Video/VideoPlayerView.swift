@@ -22,6 +22,22 @@ struct VideoPlayerView: View {
     @State private var hasBeenWatched = false  // Track if video has been watched
     private let availableSpeeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
 
+    private func checkWatchStatus() {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+        let progressRef = Firestore.firestore().collection("user_progress").document(
+            "\(userId)_\(video.id)")
+
+        progressRef.getDocument { document, error in
+            if let document = document, document.exists,
+                let watchedFull = document.data()?["watchedFull"] as? Bool
+            {
+                DispatchQueue.main.async {
+                    self.hasBeenWatched = watchedFull
+                }
+            }
+        }
+    }
+
     private var progress: Double {
         guard duration > 0 else { return 0 }
         return currentTime / duration
@@ -39,6 +55,7 @@ struct VideoPlayerView: View {
                         // Configure video player settings
                         player.play()
                         setupTimeObserver()  // Add time observer to track progress
+                        checkWatchStatus()  // Check if video has been watched before
                     }
                     .onDisappear {
                         removeTimeObserver()

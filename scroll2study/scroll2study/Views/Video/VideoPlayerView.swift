@@ -345,6 +345,7 @@ struct VideoPlayerView: View {
             await MainActor.run {
                 self.player = player
                 print("DEBUG: Set player on main actor")
+                setupTimeObserver()  // Set up time observer immediately after player is created
             }
         } catch {
             print("DEBUG: Error loading video: \(error)")
@@ -372,11 +373,23 @@ struct VideoPlayerView: View {
 
         // Update initial duration
         if let currentItem = player.currentItem {
-            // Try to get duration immediately
-            let itemDuration = currentItem.duration
-            if !itemDuration.isIndefinite && itemDuration.isValid {
-                duration = itemDuration.seconds
+            // Wait for duration to be available
+            if currentItem.status == .readyToPlay {
+                duration = currentItem.duration.seconds
             }
+
+            // Observe status changes to get duration when ready
+            let statusObserver = currentItem.observe(\.status) { item, _ in
+                if item.status == .readyToPlay {
+                    Task { @MainActor in
+                        self.duration = item.duration.seconds
+                    }
+                }
+            }
+
+            // Keep the observer alive
+            objc_setAssociatedObject(
+                currentItem, "statusObserver", statusObserver, .OBJC_ASSOCIATION_RETAIN)
 
             // Observe duration changes
             NotificationCenter.default.addObserver(

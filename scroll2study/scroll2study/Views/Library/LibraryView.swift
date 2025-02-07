@@ -11,13 +11,16 @@ private let logger = Logger(
 @MainActor
 class LibraryViewModel: ObservableObject {
     @Published var savedVideos: [SavedVideo] = []
+    @Published var completedVideos: [Video] = []
     @Published var totalWatchTime: TimeInterval = 0
     @Published var showTimeInHours = true
     @Published var error: Error?
 
     private let userService = UserService.shared
+    private let gridService = GridService()
     private var savedVideosManager: SavedVideosManager?
     private var userListener: ListenerRegistration?
+    private var progressListener: ListenerRegistration?
 
     init() {
         setupManagers()
@@ -25,11 +28,13 @@ class LibraryViewModel: ObservableObject {
 
     deinit {
         userListener?.remove()
+        progressListener?.remove()
     }
 
     private func setupManagers() {
         savedVideosManager = SavedVideosManager()
         setupUserListener()
+        setupProgressListener()
 
         // Subscribe to savedVideosManager updates
         if let videos = savedVideosManager?.savedVideos {
@@ -55,6 +60,39 @@ class LibraryViewModel: ObservableObject {
                     self.totalWatchTime = userData.stats.totalWatchTime
                 }
             }
+    }
+
+    private func setupProgressListener() {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+
+        // First, fetch the grid data
+        Task {
+            await gridService.fetchGridData()
+
+            // Then set up the listener for completed videos
+            progressListener = Firestore.firestore()
+                .collection("user_progress")
+                .whereField("userId", isEqualTo: userId)
+                .whereField("watchedFull", isEqualTo: true)
+                .addSnapshotListener { [weak self] snapshot, error in
+                    guard let self = self else { return }
+
+                    if let error = error {
+                        self.error = error
+                        return
+                    }
+
+                    let completedVideoIds = Set(
+                        snapshot?.documents.compactMap { doc in
+                            doc.data()["videoId"] as? String
+                        } ?? [])
+
+                    // Update completed videos list
+                    self.completedVideos = self.gridService.videos.filter { video in
+                        completedVideoIds.contains(video.id)
+                    }
+                }
+        }
     }
 
     func loadUserData() {
@@ -123,6 +161,47 @@ struct SavedVideoCard: View {
     }
 }
 
+struct CompletedVideoCard: View {
+    let video: Video
+
+    var body: some View {
+        VStack(alignment: .leading) {
+            AsyncImage(url: URL(string: video.metadata.thumbnailUrl)) { image in
+                image
+                    .resizable()
+                    .aspectRatio(contentMode: .fill)
+            } placeholder: {
+                Rectangle()
+                    .fill(Color.gray.opacity(0.2))
+                    .overlay(
+                        Image(systemName: "play.circle.fill")
+                            .foregroundColor(.gray)
+                            .font(.largeTitle)
+                    )
+            }
+            .frame(width: 160, height: 90)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(
+                Image(systemName: "checkmark.circle.fill")
+                    .foregroundColor(.green)
+                    .font(.title2)
+                    .padding(8),
+                alignment: .topTrailing
+            )
+
+            Text(video.title)
+                .font(.caption)
+                .lineLimit(2)
+                .foregroundColor(.primary)
+
+            Text(video.subject)
+                .font(.caption2)
+                .foregroundColor(.secondary)
+        }
+        .frame(width: 160)
+    }
+}
+
 struct LibrarySection<Content: View>: View {
     let title: String
     let icon: String
@@ -171,6 +250,17 @@ struct LibraryView: View {
                     .font(.largeTitle)
                     .bold()
                     .padding(.horizontal)
+
+                // Completed Videos
+                LibrarySection(
+                    title: "Completed Videos",
+                    icon: "checkmark.circle.fill",
+                    count: viewModel.completedVideos.count
+                ) {
+                    ForEach(viewModel.completedVideos) { video in
+                        CompletedVideoCard(video: video)
+                    }
+                }
 
                 // Continue Watching
                 LibrarySection(title: "Continue Watching", icon: "play.circle", count: 3) {
@@ -271,7 +361,7 @@ struct LibraryView: View {
                         }
                         StatBox(
                             title: "Videos",
-                            value: "\(viewModel.savedVideos.count)",
+                            value: "\(viewModel.completedVideos.count)",
                             icon: "play.square.fill"
                         )
                         StatBox(title: "Subjects", value: "5", icon: "folder.fill")

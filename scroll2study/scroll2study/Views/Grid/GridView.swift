@@ -8,6 +8,7 @@ import SwiftUI
 
 struct GridView: View {
     @StateObject private var gridService = GridService()
+    @EnvironmentObject private var videoSelection: VideoSelectionState
     @State private var currentSubjectIndex = 0
     @State private var currentLevelIndex = 0
     @State private var isDragging = false
@@ -15,6 +16,7 @@ struct GridView: View {
     @State private var isScrollingHorizontally = false
     @State private var offset: CGSize = .zero
     @State private var user: User?
+    @State private var hasInitialized = false
 
     // Percentage of screen width/height needed to trigger a snap
     private let snapThreshold: CGFloat = 0.2
@@ -30,13 +32,30 @@ struct GridView: View {
         return gridService.complexityLevels[currentLevelIndex]
     }
 
+    private func navigateToVideo(_ video: Video) {
+        guard !gridService.subjects.isEmpty && !gridService.complexityLevels.isEmpty else { return }
+
+        if let subjectIndex = gridService.subjects.firstIndex(where: { $0.id == video.subject }),
+            let levelIndex = gridService.complexityLevels.firstIndex(where: {
+                $0.level == video.complexityLevel
+            })
+        {
+            withAnimation(.easeInOut(duration: 0.3)) {
+                currentSubjectIndex = subjectIndex
+                currentLevelIndex = levelIndex
+            }
+        }
+    }
+
     private func loadUserPreferences() async {
         guard let currentUser = Auth.auth().currentUser else { return }
         do {
             if let userData = try await userService.getUser(id: currentUser.uid) {
                 user = userData
-                // Adjust currentLevelIndex based on user's preferred level
-                if !gridService.complexityLevels.isEmpty {
+                // Only set preferred level if we haven't initialized and there's no selected video
+                if !hasInitialized && !gridService.complexityLevels.isEmpty
+                    && videoSelection.selectedVideo == nil
+                {
                     let preferredLevel = userData.preferences.preferredLevel
                     currentLevelIndex =
                         gridService.complexityLevels.firstIndex { level in
@@ -101,10 +120,12 @@ struct GridView: View {
                         ? max(currentSubjectIndex - 1, 0)
                         : min(currentSubjectIndex + 1, gridService.subjects.count - 1)
 
-                    // Reset to user's preferred level when switching subjects
+                    // Only reset to preferred level when manually dragging between subjects
+                    // and not when navigating from video selection
                     if previousSubjectIndex != currentSubjectIndex,
                         let preferredLevel = user?.preferences.preferredLevel,
-                        !gridService.complexityLevels.isEmpty
+                        !gridService.complexityLevels.isEmpty,
+                        videoSelection.selectedVideo == nil  // Only reset if not from video selection
                     {
                         currentLevelIndex =
                             gridService.complexityLevels.firstIndex { level in
@@ -206,7 +227,21 @@ struct GridView: View {
         .edgesIgnoringSafeArea(.all)
         .task {
             await gridService.fetchGridData()
+
+            // If we have a selected video, navigate to it first
+            if let video = videoSelection.selectedVideo {
+                navigateToVideo(video)
+                videoSelection.selectedVideo = nil
+            }
+
             await loadUserPreferences()
+            hasInitialized = true
+        }
+        .onChange(of: videoSelection.selectedVideo) { video in
+            if let video = video {
+                navigateToVideo(video)
+                videoSelection.selectedVideo = nil
+            }
         }
     }
 }

@@ -9,6 +9,11 @@ import FirebaseAuth
 import SwiftUI
 import os
 
+class VideoSelectionState: ObservableObject {
+    @Published var selectedVideo: Video?
+    @Published var shouldNavigateToVideo = false
+}
+
 private let logger = Logger(
     subsystem: Bundle.main.bundleIdentifier ?? "scroll2study", category: "ContentView")
 
@@ -66,6 +71,7 @@ struct CounterResponse: Codable {
 
 struct ContentView: View {
     @StateObject private var authManager = AuthenticationManager.shared
+    @StateObject private var videoSelection = VideoSelectionState()
     @State private var selectedTab = 0
 
     var body: some View {
@@ -105,6 +111,13 @@ struct ContentView: View {
                         }
                         .tag(3)
                     }
+                    .onChange(of: videoSelection.shouldNavigateToVideo) { shouldNavigate in
+                        if shouldNavigate {
+                            selectedTab = 0  // Switch to Explore tab
+                            videoSelection.shouldNavigateToVideo = false
+                        }
+                    }
+                    .environmentObject(videoSelection)
                     .onAppear {
                         // Set tab bar background to solid white
                         let tabBarAppearance = UITabBarAppearance()

@@ -77,7 +77,7 @@ public struct Position: Codable {
     }
 }
 
-public struct Video: Identifiable, Codable {
+public struct Video: Identifiable, Codable, Equatable {
     public let id: String
     public let title: String
     public let description: String
@@ -105,5 +105,9 @@ public struct Video: Identifiable, Codable {
         self.metadata = metadata
         self.position = position
         self.isActive = isActive
+    }
+
+    public static func == (lhs: Video, rhs: Video) -> Bool {
+        return lhs.id == rhs.id
     }
 }

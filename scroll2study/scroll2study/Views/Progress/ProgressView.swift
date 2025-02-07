@@ -62,6 +62,7 @@ class ProgressViewModel: ObservableObject {
 
 struct VideoProgressView: View {
     @StateObject private var viewModel = ProgressViewModel()
+    @EnvironmentObject private var videoSelection: VideoSelectionState
     @State private var contentSize: CGSize = .zero
     @State private var containerSize: CGSize = .zero
     @State private var scrollPosition: CGPoint = .zero
@@ -77,121 +78,135 @@ struct VideoProgressView: View {
     private func progressCell(for subject: Subject, level: ComplexityLevel) -> some View {
         let isWatched = viewModel.progressMap[subject.id]?[level.level] ?? false
         let hasVideo = viewModel.gridService.hasVideo(for: subject.id, at: level.level)
+        let video = viewModel.gridService.videos.first {
+            $0.subject == subject.id && $0.complexityLevel == level.level
+        }
 
-        return ZStack {
-            RoundedRectangle(cornerRadius: 4)
-                .fill(isWatched ? Color.green.opacity(0.8) : Color.gray.opacity(0.1))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 4)
-                        .strokeBorder(Color.gray.opacity(0.2), lineWidth: 1)
-                )
+        return Button(action: {
+            if let video = video {
+                videoSelection.selectedVideo = video
+                videoSelection.shouldNavigateToVideo = true
+            }
+        }) {
+            ZStack {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(isWatched ? Color.green.opacity(0.8) : Color.gray.opacity(0.1))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 4)
+                            .strokeBorder(Color.gray.opacity(0.2), lineWidth: 1)
+                    )
 
-            if !hasVideo {
-                Image(systemName: "xmark")
-                    .foregroundColor(.gray)
-                    .font(.system(size: 12, weight: .bold))
-            } else if isWatched {
-                Image(systemName: "checkmark")
-                    .foregroundColor(.white)
-                    .font(.system(size: 12, weight: .bold))
+                if !hasVideo {
+                    Image(systemName: "xmark")
+                        .foregroundColor(.gray)
+                        .font(.system(size: 12, weight: .bold))
+                } else if isWatched {
+                    Image(systemName: "checkmark")
+                        .foregroundColor(.white)
+                        .font(.system(size: 12, weight: .bold))
+                }
             }
         }
+        .disabled(!hasVideo)
         .frame(width: cellWidth, height: cellHeight)
         .shadow(radius: 1)
     }
 
     var body: some View {
-        GeometryReader { geometry in
-            if viewModel.isLoading {
-                SwiftUI.ProgressView()
-            } else if let error = viewModel.error {
-                VStack {
-                    Text("Error loading progress")
-                        .font(.headline)
-                    Text(error.localizedDescription)
-                        .font(.subheadline)
-                        .foregroundColor(.red)
-                }
-            } else {
-                ScrollView([.horizontal, .vertical], showsIndicators: true) {
-                    VStack(alignment: .leading, spacing: verticalSpacing) {
-                        Color.clear.frame(height: headerHeight)
-
-                        ForEach(viewModel.complexityLevels) { level in
-                            HStack(spacing: horizontalSpacing) {
-                                Color.clear.frame(width: labelWidth + horizontalSpacing)
-
-                                ForEach(viewModel.subjects) { subject in
-                                    progressCell(for: subject, level: level)
-                                }
-                            }
-                            .padding(.vertical, 4)
-                        }
-                    }
-                    .padding(.horizontal, horizontalSpacing)
-                    .background(
-                        GeometryReader { proxy in
-                            Color.clear.onChange(of: proxy.frame(in: .named("scroll"))) { frame in
-                                scrollPosition = CGPoint(
-                                    x: frame.minX,
-                                    y: frame.minY
-                                )
-                            }
-                        }
-                    )
-                }
-                .coordinateSpace(name: "scroll")
-
-                Group {
+        NavigationView {
+            GeometryReader { geometry in
+                if viewModel.isLoading {
+                    SwiftUI.ProgressView()
+                } else if let error = viewModel.error {
                     VStack {
-                        HStack(spacing: horizontalSpacing) {
-                            Color.clear.frame(width: labelWidth + horizontalSpacing)
-
-                            HStack(spacing: horizontalSpacing) {
-                                ForEach(viewModel.subjects) { subject in
-                                    Text(subject.name)
-                                        .font(.caption2)
-                                        .frame(width: cellWidth)
-                                        .frame(height: headerHeight)
-                                        .multilineTextAlignment(.center)
-                                        .lineLimit(2)
-                                }
-                            }
-                        }
-                        .frame(height: headerHeight)
-                        .background(Color(UIColor.systemBackground))
-                        .offset(x: scrollPosition.x)
-
-                        Spacer()
+                        Text("Error loading progress")
+                            .font(.headline)
+                        Text(error.localizedDescription)
+                            .font(.subheadline)
+                            .foregroundColor(.red)
                     }
-                    .zIndex(2)
-
-                    HStack {
-                        VStack(alignment: .trailing, spacing: verticalSpacing) {
+                } else {
+                    ScrollView([.horizontal, .vertical], showsIndicators: true) {
+                        VStack(alignment: .leading, spacing: verticalSpacing) {
                             Color.clear.frame(height: headerHeight)
 
                             ForEach(viewModel.complexityLevels) { level in
-                                Text("Level \(level.level)")
-                                    .font(.caption2)
-                                    .foregroundColor(.secondary)
-                                    .frame(width: labelWidth)
-                                    .frame(height: cellHeight)
-                                    .multilineTextAlignment(.trailing)
-                                    .padding(.vertical, 4)
+                                HStack(spacing: horizontalSpacing) {
+                                    Color.clear.frame(width: labelWidth + horizontalSpacing)
+
+                                    ForEach(viewModel.subjects) { subject in
+                                        progressCell(for: subject, level: level)
+                                    }
+                                }
+                                .padding(.vertical, 4)
                             }
                         }
-                        .frame(width: labelWidth + horizontalSpacing)
-                        .background(Color(UIColor.systemBackground))
-                        .offset(y: scrollPosition.y)
-
-                        Spacer()
+                        .padding(.horizontal, horizontalSpacing)
+                        .background(
+                            GeometryReader { proxy in
+                                Color.clear.onChange(of: proxy.frame(in: .named("scroll"))) {
+                                    frame in
+                                    scrollPosition = CGPoint(
+                                        x: frame.minX,
+                                        y: frame.minY
+                                    )
+                                }
+                            }
+                        )
                     }
-                    .zIndex(1)
+                    .coordinateSpace(name: "scroll")
+
+                    Group {
+                        VStack {
+                            HStack(spacing: horizontalSpacing) {
+                                Color.clear.frame(width: labelWidth + horizontalSpacing)
+
+                                HStack(spacing: horizontalSpacing) {
+                                    ForEach(viewModel.subjects) { subject in
+                                        Text(subject.name)
+                                            .font(.caption2)
+                                            .frame(width: cellWidth)
+                                            .frame(height: headerHeight)
+                                            .multilineTextAlignment(.center)
+                                            .lineLimit(2)
+                                    }
+                                }
+                            }
+                            .frame(height: headerHeight)
+                            .background(Color(UIColor.systemBackground))
+                            .offset(x: scrollPosition.x)
+
+                            Spacer()
+                        }
+                        .zIndex(2)
+
+                        HStack {
+                            VStack(alignment: .trailing, spacing: verticalSpacing) {
+                                Color.clear.frame(height: headerHeight)
+
+                                ForEach(viewModel.complexityLevels) { level in
+                                    Text("Level \(level.level)")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                        .frame(width: labelWidth)
+                                        .frame(height: cellHeight)
+                                        .multilineTextAlignment(.trailing)
+                                        .padding(.vertical, 4)
+                                }
+                            }
+                            .frame(width: labelWidth + horizontalSpacing)
+                            .background(Color(UIColor.systemBackground))
+                            .offset(y: scrollPosition.y)
+
+                            Spacer()
+                        }
+                        .zIndex(1)
+                    }
                 }
             }
-        }
-        .task {
-            await viewModel.fetchData()
+            .task {
+                await viewModel.fetchData()
+            }
         }
     }
 }

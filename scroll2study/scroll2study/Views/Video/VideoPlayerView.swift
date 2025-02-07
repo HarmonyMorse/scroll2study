@@ -157,7 +157,7 @@ struct VideoPlayerView: View {
                                                     color: .black.opacity(0.2), radius: 8, x: 0,
                                                     y: 4)
                                         )
-                                        .offset(x: 160, y: 0)
+                                        .offset(x: 180, y: 0)
                                         .transition(.opacity.combined(with: .scale(scale: 0.95)))
                                     }
                                 }

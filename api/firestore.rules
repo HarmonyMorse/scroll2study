@@ -59,6 +59,13 @@ service cloud.firestore {
                    request.resource.data.updatedAt > resource.data.updatedAt;
       
       allow delete: if false;  // Prevent user deletion (handled by admin)
+
+      // Saved videos subcollection
+      match /savedVideos/{videoId} {
+        allow read: if isOwner(userId);
+        allow create, update: if isOwner(userId);
+        allow delete: if isOwner(userId);
+      }
     }
     
     // Progress tracking - authenticated access only

@@ -381,60 +381,6 @@ struct LibraryView: View {
                 }
                 .padding(.horizontal)
 
-                // Study Stats
-                VStack(alignment: .leading, spacing: 12) {
-                    Label("Study Statistics", systemImage: "chart.bar.fill")
-                        .font(.headline)
-                        .padding(.horizontal)
-
-                    HStack(spacing: 20) {
-                        StatBox(
-                            title: viewModel.watchTimeUnit,
-                            value: viewModel.formatWatchTime(),
-                            icon: "clock.fill"
-                        )
-                        .onTapGesture {
-                            viewModel.toggleTimeDisplay()
-                        }
-                        StatBox(
-                            title: "Videos",
-                            value: "\(viewModel.completedVideos.count)",
-                            icon: "play.square.fill"
-                        )
-                        StatBox(title: "Subjects", value: "5", icon: "folder.fill")
-                    }
-                    .padding(.horizontal)
-                }
-
-                // Recent Achievements
-                HStack {
-                    Label("Recent Achievements", systemImage: "star.fill")
-                        .font(.headline)
-                    Spacer()
-                    Text("View All")
-                        .foregroundColor(.blue)
-                }
-                .padding(.horizontal)
-
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 15) {
-                        ForEach(0..<3) { _ in
-                            VStack {
-                                Circle()
-                                    .fill(Color.yellow.opacity(0.2))
-                                    .frame(width: 60, height: 60)
-                                    .overlay(
-                                        Image(systemName: "star.fill")
-                                            .foregroundColor(.yellow)
-                                    )
-                                Text("Study Streak")
-                                    .font(.caption)
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-
                 // Saved Videos
                 LibrarySection(
                     title: "Saved Videos",

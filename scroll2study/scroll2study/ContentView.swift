@@ -88,7 +88,7 @@ struct ContentView: View {
                         .tag(0)
 
                         NavigationView {
-                            VideoProgressView()
+                            ProgressView()
                         }
                         .tabItem {
                             Label("Progress", systemImage: "chart.line.uptrend.xyaxis")

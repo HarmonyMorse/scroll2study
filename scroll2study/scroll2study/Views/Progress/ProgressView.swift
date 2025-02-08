@@ -726,6 +726,19 @@ struct VideoProgressView: View {
                                     }
                                     .padding(.vertical, 4)
                                 }
+                                .padding(.horizontal, horizontalSpacing)
+                                .background(
+                                    GeometryReader { proxy in
+                                        Color.clear.onChange(of: proxy.frame(in: .named("scroll")))
+                                        {
+                                            frame in
+                                            scrollPosition = CGPoint(
+                                                x: frame.minX,
+                                                y: frame.minY
+                                            )
+                                        }
+                                    }
+                                )
                             }
                             .padding(.horizontal, horizontalSpacing)
                             .background(

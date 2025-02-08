@@ -13,8 +13,6 @@ class LibraryViewModel: ObservableObject {
     @Published var savedVideos: [SavedVideo] = []
     @Published var completedVideos: [Video] = []
     @Published var collections: [Collection] = []
-    @Published var totalWatchTime: TimeInterval = 0
-    @Published var showTimeInHours = true
     @Published var error: Error?
 
     private let userService = UserService.shared
@@ -63,10 +61,6 @@ class LibraryViewModel: ObservableObject {
                     self.error = error
                     return
                 }
-
-                if let userData = snapshot.flatMap({ User(from: $0) }) {
-                    self.totalWatchTime = userData.stats.totalWatchTime
-                }
             }
     }
 
@@ -101,52 +95,6 @@ class LibraryViewModel: ObservableObject {
                     }
                 }
         }
-    }
-
-    func loadUserData() {
-        Task {
-            guard let currentUser = Auth.auth().currentUser else { return }
-            do {
-                if let userData = try await userService.getUser(id: currentUser.uid) {
-                    self.totalWatchTime = userData.stats.totalWatchTime
-                }
-            } catch {
-                self.error = error
-            }
-        }
-    }
-
-    func toggleTimeDisplay() {
-        // Only allow toggling if we have more than an hour of watch time
-        if totalWatchTime >= 3600 {
-            showTimeInHours.toggle()
-        }
-    }
-
-    func formatWatchTime() -> String {
-        // Always show in minutes if less than an hour
-        if totalWatchTime < 3600 {
-            let minutes = Int(totalWatchTime / 60)
-            return "\(minutes)"
-        }
-
-        // For longer durations, allow toggling between hours and minutes
-        if showTimeInHours {
-            let hours = Int(totalWatchTime / 3600)
-            return "\(hours)"
-        } else {
-            let minutes = Int(totalWatchTime / 60)
-            return "\(minutes)"
-        }
-    }
-
-    var watchTimeUnit: String {
-        // Always show "Minutes" if less than an hour
-        if totalWatchTime < 3600 {
-            return "Minutes"
-        }
-        // For longer durations, allow toggling
-        return showTimeInHours ? "Hours" : "Minutes"
     }
 
     func getVideosForCollection(_ collection: Collection) -> [Video] {
@@ -381,60 +329,6 @@ struct LibraryView: View {
                 }
                 .padding(.horizontal)
 
-                // Study Stats
-                VStack(alignment: .leading, spacing: 12) {
-                    Label("Study Statistics", systemImage: "chart.bar.fill")
-                        .font(.headline)
-                        .padding(.horizontal)
-
-                    HStack(spacing: 20) {
-                        StatBox(
-                            title: viewModel.watchTimeUnit,
-                            value: viewModel.formatWatchTime(),
-                            icon: "clock.fill"
-                        )
-                        .onTapGesture {
-                            viewModel.toggleTimeDisplay()
-                        }
-                        StatBox(
-                            title: "Videos",
-                            value: "\(viewModel.completedVideos.count)",
-                            icon: "play.square.fill"
-                        )
-                        StatBox(title: "Subjects", value: "5", icon: "folder.fill")
-                    }
-                    .padding(.horizontal)
-                }
-
-                // Recent Achievements
-                HStack {
-                    Label("Recent Achievements", systemImage: "star.fill")
-                        .font(.headline)
-                    Spacer()
-                    Text("View All")
-                        .foregroundColor(.blue)
-                }
-                .padding(.horizontal)
-
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 15) {
-                        ForEach(0..<3) { _ in
-                            VStack {
-                                Circle()
-                                    .fill(Color.yellow.opacity(0.2))
-                                    .frame(width: 60, height: 60)
-                                    .overlay(
-                                        Image(systemName: "star.fill")
-                                            .foregroundColor(.yellow)
-                                    )
-                                Text("Study Streak")
-                                    .font(.caption)
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-
                 // Saved Videos
                 LibrarySection(
                     title: "Saved Videos",
@@ -514,30 +408,6 @@ struct LibraryView: View {
         .onReceive(viewModel.$error) { error in
             showingError = error != nil
         }
-    }
-}
-
-struct StatBox: View {
-    let title: String
-    let value: String
-    let icon: String
-
-    var body: some View {
-        VStack {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundColor(.blue)
-            Text(value)
-                .font(.title3)
-                .bold()
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.gray)
-        }
-        .frame(maxWidth: .infinity)
-        .padding()
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(10)
     }
 }
 

@@ -117,10 +117,20 @@ class LibraryViewModel: ObservableObject {
     }
 
     func toggleTimeDisplay() {
-        showTimeInHours.toggle()
+        // Only allow toggling if we have more than an hour of watch time
+        if totalWatchTime >= 3600 {
+            showTimeInHours.toggle()
+        }
     }
 
     func formatWatchTime() -> String {
+        // Always show in minutes if less than an hour
+        if totalWatchTime < 3600 {
+            let minutes = Int(totalWatchTime / 60)
+            return "\(minutes)"
+        }
+
+        // For longer durations, allow toggling between hours and minutes
         if showTimeInHours {
             let hours = Int(totalWatchTime / 3600)
             return "\(hours)"
@@ -131,7 +141,12 @@ class LibraryViewModel: ObservableObject {
     }
 
     var watchTimeUnit: String {
-        showTimeInHours ? "Hours" : "Minutes"
+        // Always show "Minutes" if less than an hour
+        if totalWatchTime < 3600 {
+            return "Minutes"
+        }
+        // For longer durations, allow toggling
+        return showTimeInHours ? "Hours" : "Minutes"
     }
 
     func getVideosForCollection(_ collection: Collection) -> [Video] {

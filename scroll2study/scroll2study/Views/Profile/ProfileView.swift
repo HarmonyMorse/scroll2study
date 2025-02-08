@@ -61,22 +61,6 @@ struct ProfileView: View {
                     }
                 }
 
-                Section("Statistics") {
-                    HStack {
-                        Image(systemName: "clock")
-                        Text("Total Watch Time")
-                        Spacer()
-                        Text(formatDuration(user.stats.totalWatchTime))
-                    }
-
-                    HStack {
-                        Image(systemName: "checkmark.circle")
-                        Text("Completed Videos")
-                        Spacer()
-                        Text("\(user.stats.completedVideos)")
-                    }
-                }
-
                 Section("Settings") {
                     Toggle(isOn: .constant(user.settings.notifications)) {
                         HStack {
@@ -171,13 +155,6 @@ struct ProfileView: View {
             errorMessage = "Failed to sign out: \(error.localizedDescription)"
             showError = true
         }
-    }
-
-    private func formatDuration(_ timeInterval: TimeInterval) -> String {
-        let formatter = DateComponentsFormatter()
-        formatter.allowedUnits = [.hour, .minute]
-        formatter.unitsStyle = .abbreviated
-        return formatter.string(from: timeInterval) ?? "0m"
     }
 
     private func levelDescription(for level: Int) -> String {

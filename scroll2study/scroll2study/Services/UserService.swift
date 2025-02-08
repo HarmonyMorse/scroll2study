@@ -52,9 +52,22 @@ class UserService {
     }
 
     func updateUser(_ user: User) async throws {
+        // Create a new user instance with updated timestamp
+        let updatedUser = User(
+            id: user.id,
+            lastActive: user.lastActive,
+            role: user.role,
+            preferences: user.preferences,
+            profile: user.profile,
+            stats: user.stats,
+            settings: user.settings,
+            createdAt: user.createdAt,
+            updatedAt: Date()
+        )
+
         try await db.collection("users")
             .document(user.id)
-            .setData(user.toDictionary(), merge: true)
+            .setData(updatedUser.toDictionary(), merge: true)
     }
 
     func updateLastActive(for userId: String) async throws {

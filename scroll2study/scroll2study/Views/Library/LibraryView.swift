@@ -13,8 +13,6 @@ class LibraryViewModel: ObservableObject {
     @Published var savedVideos: [SavedVideo] = []
     @Published var completedVideos: [Video] = []
     @Published var collections: [Collection] = []
-    @Published var totalWatchTime: TimeInterval = 0
-    @Published var showTimeInHours = true
     @Published var error: Error?
 
     private let userService = UserService.shared
@@ -63,10 +61,6 @@ class LibraryViewModel: ObservableObject {
                     self.error = error
                     return
                 }
-
-                if let userData = snapshot.flatMap({ User(from: $0) }) {
-                    self.totalWatchTime = userData.stats.totalWatchTime
-                }
             }
     }
 
@@ -101,52 +95,6 @@ class LibraryViewModel: ObservableObject {
                     }
                 }
         }
-    }
-
-    func loadUserData() {
-        Task {
-            guard let currentUser = Auth.auth().currentUser else { return }
-            do {
-                if let userData = try await userService.getUser(id: currentUser.uid) {
-                    self.totalWatchTime = userData.stats.totalWatchTime
-                }
-            } catch {
-                self.error = error
-            }
-        }
-    }
-
-    func toggleTimeDisplay() {
-        // Only allow toggling if we have more than an hour of watch time
-        if totalWatchTime >= 3600 {
-            showTimeInHours.toggle()
-        }
-    }
-
-    func formatWatchTime() -> String {
-        // Always show in minutes if less than an hour
-        if totalWatchTime < 3600 {
-            let minutes = Int(totalWatchTime / 60)
-            return "\(minutes)"
-        }
-
-        // For longer durations, allow toggling between hours and minutes
-        if showTimeInHours {
-            let hours = Int(totalWatchTime / 3600)
-            return "\(hours)"
-        } else {
-            let minutes = Int(totalWatchTime / 60)
-            return "\(minutes)"
-        }
-    }
-
-    var watchTimeUnit: String {
-        // Always show "Minutes" if less than an hour
-        if totalWatchTime < 3600 {
-            return "Minutes"
-        }
-        // For longer durations, allow toggling
-        return showTimeInHours ? "Hours" : "Minutes"
     }
 
     func getVideosForCollection(_ collection: Collection) -> [Video] {
@@ -460,30 +408,6 @@ struct LibraryView: View {
         .onReceive(viewModel.$error) { error in
             showingError = error != nil
         }
-    }
-}
-
-struct StatBox: View {
-    let title: String
-    let value: String
-    let icon: String
-
-    var body: some View {
-        VStack {
-            Image(systemName: icon)
-                .font(.title2)
-                .foregroundColor(.blue)
-            Text(value)
-                .font(.title3)
-                .bold()
-            Text(title)
-                .font(.caption)
-                .foregroundColor(.gray)
-        }
-        .frame(maxWidth: .infinity)
-        .padding()
-        .background(Color.gray.opacity(0.1))
-        .cornerRadius(10)
     }
 }
 

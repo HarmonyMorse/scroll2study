@@ -69,14 +69,52 @@ struct CounterResponse: Codable {
     let personalCounter: Int
 }
 
+struct SplashScreenView: View {
+    var body: some View {
+        ZStack {
+            Color.white.edgesIgnoringSafeArea(.all)
+            Image("pexels-glasses")
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
+                .clipped()
+                .edgesIgnoringSafeArea(.all)
+                .overlay(
+                    Color.black.opacity(0.3)
+                        .edgesIgnoringSafeArea(.all)
+                )
+            VStack {
+                Text("Scroll2Study")
+                    .font(.system(size: 42, weight: .bold))
+                    .foregroundColor(.white)
+                    .shadow(radius: 10)
+                Text("Learn at your own pace")
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundColor(.white)
+                    .shadow(radius: 5)
+            }
+        }
+    }
+}
+
 struct ContentView: View {
     @StateObject private var authManager = AuthenticationManager.shared
     @StateObject private var videoSelection = VideoSelectionState()
     @State private var selectedTab = 0
+    @State private var isShowingSplash = true
 
     var body: some View {
         Group {
-            if authManager.isAuthenticated {
+            if isShowingSplash {
+                SplashScreenView()
+                    .onAppear {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            withAnimation(.easeOut(duration: 0.5)) {
+                                isShowingSplash = false
+                            }
+                        }
+                    }
+            } else if authManager.isAuthenticated {
                 ZStack(alignment: .bottom) {
                     TabView(selection: $selectedTab) {
                         NavigationView {

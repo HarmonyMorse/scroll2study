@@ -891,6 +891,14 @@ struct TabButton: View {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 8)
         }
+        .navigationTitle(
+            {
+                switch selectedView {
+                case .grid: return "Progress Grid"
+                case .overview: return "Progress Overview"
+                case .achievements: return "Achievements"
+                }
+            }())
     }
 }
 

@@ -102,6 +102,16 @@ struct ContentView: View {
     @StateObject private var videoSelection = VideoSelectionState()
     @State private var selectedTab = 0
     @State private var isShowingSplash = true
+    @State private var showingProgressMenu = false
+    @State private var selectedProgressView: ProgressViewType = .grid
+
+    private func handleTabSelection(_ tab: Int) {
+        if tab == 1 {  // Progress tab
+            showingProgressMenu = true
+        } else {
+            selectedTab = tab
+        }
+    }
 
     var body: some View {
         Group {
@@ -116,7 +126,12 @@ struct ContentView: View {
                     }
             } else if authManager.isAuthenticated {
                 ZStack(alignment: .bottom) {
-                    TabView(selection: $selectedTab) {
+                    TabView(
+                        selection: Binding(
+                            get: { selectedTab },
+                            set: { handleTabSelection($0) }
+                        )
+                    ) {
                         NavigationView {
                             GridView()
                         }
@@ -126,7 +141,7 @@ struct ContentView: View {
                         .tag(0)
 
                         NavigationView {
-                            VideoProgressView()
+                            VideoProgressView(selectedView: $selectedProgressView)
                         }
                         .tabItem {
                             Label("Progress", systemImage: "chart.line.uptrend.xyaxis")
@@ -163,6 +178,16 @@ struct ContentView: View {
                         tabBarAppearance.backgroundColor = .systemBackground
                         UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
                         UITabBar.appearance().standardAppearance = tabBarAppearance
+                    }
+                }
+                .sheet(isPresented: $showingProgressMenu) {
+                    ProgressMenuView(
+                        isPresented: $showingProgressMenu,
+                        selectedView: $selectedProgressView
+                    )
+                    .presentationDetents([.height(350)])
+                    .onDisappear {
+                        selectedTab = 1  // Switch to Progress tab after selection
                     }
                 }
             } else {

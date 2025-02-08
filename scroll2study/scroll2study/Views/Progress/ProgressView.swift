@@ -61,12 +61,94 @@ class ProgressViewModel: ObservableObject {
     }
 }
 
-struct GridProgressView: View {
+enum ProgressViewType {
+    case grid
+    case overview
+    case achievements
+}
+
+struct ProgressMenuView: View {
+    @Binding var isPresented: Bool
+    @Binding var selectedView: ProgressViewType
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Text("Progress View")
+                .font(.title2)
+                .fontWeight(.bold)
+                .padding(.top)
+
+            Button(action: {
+                selectedView = .grid
+                isPresented = false
+            }) {
+                HStack {
+                    Image(systemName: "square.grid.3x3")
+                        .font(.title2)
+                    Text("Progress Grid")
+                        .font(.headline)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.blue.opacity(0.1))
+                .cornerRadius(10)
+            }
+
+            Button(action: {
+                selectedView = .overview
+                isPresented = false
+            }) {
+                HStack {
+                    Image(systemName: "chart.bar")
+                        .font(.title2)
+                    Text("Overview")
+                        .font(.headline)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.green.opacity(0.1))
+                .cornerRadius(10)
+            }
+
+            Button(action: {
+                selectedView = .achievements
+                isPresented = false
+            }) {
+                HStack {
+                    Image(systemName: "trophy")
+                        .font(.title2)
+                    Text("Achievements")
+                        .font(.headline)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color.orange.opacity(0.1))
+                .cornerRadius(10)
+            }
+
+            Button(action: {
+                isPresented = false
+            }) {
+                Text("Cancel")
+                    .foregroundColor(.secondary)
+            }
+            .padding(.top)
+        }
+        .padding()
+        .background(Color(UIColor.systemBackground))
+        .cornerRadius(20)
+        .shadow(radius: 10)
+        .padding()
+    }
+}
+
+struct VideoProgressView: View {
     @StateObject private var viewModel = ProgressViewModel()
     @EnvironmentObject private var videoSelection: VideoSelectionState
     @State private var contentSize: CGSize = .zero
     @State private var containerSize: CGSize = .zero
     @State private var scrollPosition: CGPoint = .zero
+    @Binding var selectedView: ProgressViewType
 
     // 9:16 aspect ratio for video thumbnails (portrait)
     private let cellWidth: CGFloat = 45
@@ -114,32 +196,113 @@ struct GridProgressView: View {
     }
 
     var body: some View {
-        GeometryReader { geometry in
-            if viewModel.isLoading {
-                SwiftUI.ProgressView()
-            } else if let error = viewModel.error {
-                VStack {
-                    Text("Error loading progress")
-                        .font(.headline)
-                    Text(error.localizedDescription)
-                        .font(.subheadline)
-                        .foregroundColor(.red)
-                }
-            } else {
-                ScrollView([.horizontal, .vertical], showsIndicators: true) {
-                    VStack(alignment: .leading, spacing: verticalSpacing) {
-                        Color.clear.frame(height: headerHeight)
-
-                        ForEach(viewModel.complexityLevels) { level in
-                            HStack(spacing: horizontalSpacing) {
-                                Color.clear.frame(width: labelWidth + horizontalSpacing)
-
-                                ForEach(viewModel.subjects) { subject in
-                                    progressCell(for: subject, level: level)
-                                }
+        NavigationView {
+            Group {
+                switch selectedView {
+                case .grid:
+                    GeometryReader { geometry in
+                        if viewModel.isLoading {
+                            SwiftUI.ProgressView()
+                        } else if let error = viewModel.error {
+                            VStack {
+                                Text("Error loading progress")
+                                    .font(.headline)
+                                Text(error.localizedDescription)
+                                    .font(.subheadline)
+                                    .foregroundColor(.red)
                             }
-                            .padding(.vertical, 4)
+                        } else {
+                            ScrollView([.horizontal, .vertical], showsIndicators: true) {
+                                VStack(alignment: .leading, spacing: verticalSpacing) {
+                                    Color.clear.frame(height: headerHeight)
+
+                                    ForEach(viewModel.complexityLevels) { level in
+                                        HStack(spacing: horizontalSpacing) {
+                                            Color.clear.frame(width: labelWidth + horizontalSpacing)
+
+                                            ForEach(viewModel.subjects) { subject in
+                                                progressCell(for: subject, level: level)
+                                            }
+                                        }
+                                        .padding(.vertical, 4)
+                                    }
+                                }
+                                .padding(.horizontal, horizontalSpacing)
+                                .background(
+                                    GeometryReader { proxy in
+                                        Color.clear.onChange(of: proxy.frame(in: .named("scroll")))
+                                        {
+                                            frame in
+                                            scrollPosition = CGPoint(
+                                                x: frame.minX,
+                                                y: frame.minY
+                                            )
+                                        }
+                                    }
+                                )
+                            }
+                            .coordinateSpace(name: "scroll")
+
+                            Group {
+                                VStack {
+                                    HStack(spacing: horizontalSpacing) {
+                                        Color.clear.frame(width: labelWidth + horizontalSpacing)
+
+                                        HStack(spacing: horizontalSpacing) {
+                                            ForEach(viewModel.subjects) { subject in
+                                                Text(subject.name)
+                                                    .font(.caption2)
+                                                    .frame(width: cellWidth)
+                                                    .frame(height: headerHeight)
+                                                    .multilineTextAlignment(.center)
+                                                    .lineLimit(2)
+                                            }
+                                        }
+                                    }
+                                    .frame(height: headerHeight)
+                                    .background(Color(UIColor.systemBackground))
+                                    .offset(x: scrollPosition.x)
+
+                                    Spacer()
+                                }
+                                .zIndex(2)
+
+                                HStack {
+                                    VStack(alignment: .trailing, spacing: verticalSpacing) {
+                                        Color.clear.frame(height: headerHeight)
+
+                                        ForEach(viewModel.complexityLevels) { level in
+                                            Text("Level \(level.level)")
+                                                .font(.caption2)
+                                                .foregroundColor(.secondary)
+                                                .frame(width: labelWidth)
+                                                .frame(height: cellHeight)
+                                                .multilineTextAlignment(.trailing)
+                                                .padding(.vertical, 4)
+                                        }
+                                    }
+                                    .frame(width: labelWidth + horizontalSpacing)
+                                    .background(Color(UIColor.systemBackground))
+                                    .offset(y: scrollPosition.y)
+
+                                    Spacer()
+                                }
+                                .zIndex(1)
+                            }
                         }
+                    }
+                    .task {
+                        await viewModel.fetchData()
+                    }
+                case .overview:
+                    VStack {
+                        Text("Overview Coming Soon")
+                            .font(.title)
+                    }
+                case .achievements:
+                    VStack {
+                        Text("Achievements Coming Soon")
+                            .font(.title)
                     }
                     .padding(.horizontal, horizontalSpacing)
                     .background(
@@ -203,9 +366,15 @@ struct GridProgressView: View {
                     .zIndex(1)
                 }
             }
-        }
-        .task {
-            await viewModel.fetchData()
+            .navigationTitle(
+                {
+                    switch selectedView {
+                    case .grid: return ""  // Empty title for grid view
+                    case .overview: return "Progress Overview"
+                    case .achievements: return "Achievements"
+                    }
+                }()
+            )
         }
     }
 }
@@ -476,6 +645,6 @@ struct StatCard: View {
 
 #Preview {
     NavigationView {
-        ProgressView()
+        VideoProgressView(selectedView: .constant(.grid))
     }
 }

@@ -43,6 +43,10 @@ Instead of an infinite feed, the app uses a **preset "grid" of topics** built by
    - AI automatically compiles concise summaries and key takeaways from each educational video.  
    - Summaries help students quickly review what they've learned and decide whether they need to re-watch or dive deeper.
 
+3. **Lesson Plans Creator**
+   - AI generates lesson plans based on the user's progress and interests.
+   - Lesson plans include a list of videos to watch, in order, and a suggested schedule for how long to spend on each video.
+
 ## Technical Stack
 - **Frontend**:  
   - **Swift** and **SwiftUI** for iOS development (native).

@@ -631,7 +631,18 @@ struct VideoProgressView: View {
             case .grid:
                 GeometryReader { geometry in
                     if viewModel.isLoading {
-                        SwiftUI.ProgressView()
+                        ZStack {
+                            Image("pexels-graph")
+                                .resizable()
+                                .aspectRatio(contentMode: .fill)
+                                .frame(width: geometry.size.width, height: geometry.size.height)
+                                .clipped()
+                                .overlay(Color.black.opacity(0.3))
+
+                            SwiftUI.ProgressView()
+                                .scaleEffect(1.5)
+                                .tint(.white)
+                        }
                     } else if let error = viewModel.error {
                         VStack {
                             Text("Error loading progress")

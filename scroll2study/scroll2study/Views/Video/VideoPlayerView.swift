@@ -20,6 +20,7 @@ struct VideoPlayerView: View {
     @State private var timeObserver: Any?
     @State private var showProgressBar = false
     @State private var hasBeenWatched = false  // Track if video has been watched
+    @State private var showStudyNotes = false
     private let availableSpeeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
 
     private func checkWatchStatus() {
@@ -205,6 +206,22 @@ struct VideoPlayerView: View {
                                     }
                                 }
 
+                                // Study Notes button
+                                Button(action: { showStudyNotes = true }) {
+                                    VStack(spacing: 4) {
+                                        Image(systemName: "note.text")
+                                            .font(.system(size: 28))
+                                            .foregroundColor(.white)
+                                            .frame(width: 44, height: 44)
+                                            .background(Color.black.opacity(0.4))
+                                            .clipShape(Circle())
+
+                                        Text("Notes")
+                                            .font(.caption2)
+                                            .foregroundColor(.white)
+                                    }
+                                }
+
                                 // Speed button
                                 Button(action: { showSpeedPicker.toggle() }) {
                                     VStack(spacing: 4) {
@@ -246,6 +263,9 @@ struct VideoPlayerView: View {
                     )
                     .sheet(isPresented: $showSpeedPicker) {
                         SpeedPickerView(player: player, speeds: availableSpeeds)
+                    }
+                    .sheet(isPresented: $showStudyNotes) {
+                        VideoStudyNotesView(video: video)
                     }
             } else if isLoading {
                 ProgressView()
@@ -472,7 +492,8 @@ struct VideoPlayerView: View {
                         videoURL: video.metadata.videoUrl,
                         savedAt: Date(),
                         duration: duration,
-                        subject: video.subject
+                        subject: video.subject,
+                        complexityLevel: video.complexityLevel
                     )
                     try await savedVideosManager.saveVideo(savedVideo)
                 }

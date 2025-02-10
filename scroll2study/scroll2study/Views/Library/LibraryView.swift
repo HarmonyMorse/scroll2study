@@ -356,7 +356,8 @@ struct StudyNoteCard: View {
 
     var body: some View {
         Button(action: { showingDetail = true }) {
-            VStack(alignment: .leading, spacing: 8) {
+            HStack(alignment: .top, spacing: 12) {
+                // Video thumbnail
                 if let video = video {
                     AsyncImage(url: URL(string: video.metadata.thumbnailUrl)) { image in
                         image
@@ -371,31 +372,30 @@ struct StudyNoteCard: View {
                                     .font(.largeTitle)
                             )
                     }
-                    .frame(height: 90)
+                    .frame(width: 120, height: 160)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
-
-                    Text(video.title)
-                        .font(.headline)
-                        .lineLimit(1)
                 }
 
-                Text(note.originalText)
-                    .font(.body)
-                    .lineLimit(3)
-                    .foregroundColor(.primary)
+                VStack(alignment: .leading, spacing: 8) {
+                    if let video = video {
+                        Text(video.title)
+                            .font(.title3)
+                            .fontWeight(.semibold)
+                            .foregroundColor(.primary)
+                    }
 
-                if let summary = note.summary {
-                    Text("Summary: \(summary)")
+                    Text(note.originalText)
+                        .font(.body)
+                        .lineLimit(4)
+                        .foregroundColor(.secondary)
+
+                    Text(formatDate(note.createdAt))
                         .font(.caption)
                         .foregroundColor(.secondary)
-                        .lineLimit(2)
                 }
-
-                Text(formatDate(note.createdAt))
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
             }
             .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(.systemBackground))
             .cornerRadius(12)
             .shadow(radius: 2)

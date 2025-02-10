@@ -75,28 +75,40 @@ struct VideoStudyNotesView: View {
                         Button(action: {
                             showNoteDetail(note)
                         }) {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(note.originalText)
-                                    .font(.body)
-                                    .lineLimit(2)
-                                    .foregroundColor(.primary)
+                            HStack(alignment: .top, spacing: 12) {
+                                // Video thumbnail
+                                AsyncImage(url: URL(string: video.metadata.thumbnailUrl)) { image in
+                                    image
+                                        .resizable()
+                                        .aspectRatio(contentMode: .fill)
+                                } placeholder: {
+                                    Rectangle()
+                                        .fill(Color.gray.opacity(0.2))
+                                }
+                                .frame(width: 120, height: 160)
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
 
-                                if let summary = note.summary {
-                                    Text("Summary:")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                    Text(summary)
+                                VStack(alignment: .leading, spacing: 8) {
+                                    Text(video.title)
+                                        .font(.title3)
+                                        .fontWeight(.semibold)
+                                        .foregroundColor(.primary)
+
+                                    Text(note.originalText)
                                         .font(.body)
+                                        .lineLimit(4)
+                                        .foregroundColor(.secondary)
+
+                                    Text(formatDate(note.createdAt))
+                                        .font(.caption)
                                         .foregroundColor(.secondary)
                                 }
-
-                                Text(formatDate(note.createdAt))
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
                             }
-                            .padding(.vertical, 4)
+                            .padding(.vertical, 8)
                         }
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
                     }
+                    .listStyle(PlainListStyle())
                     .sheet(item: $selectedNote) { note in
                         NavigationView {
                             StudyNoteDetailView(note: note, video: video)

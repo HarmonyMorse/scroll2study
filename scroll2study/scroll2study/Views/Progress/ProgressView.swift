@@ -217,6 +217,22 @@ enum TimeStatType: Int {
     }
 }
 
+enum SubjectFilter {
+    case all
+    case completed
+    case inProgress
+    case notStarted
+
+    var title: String {
+        switch self {
+        case .all: return "All"
+        case .completed: return "Completed"
+        case .inProgress: return "In Progress"
+        case .notStarted: return "Not Started"
+        }
+    }
+}
+
 struct StatCard: View {
     let title: String
     let value: String
@@ -275,6 +291,7 @@ struct ProgressOverview: View {
     @State private var subjectStatType: SubjectStatType = .total
     @State private var videoStatType: VideoStatType = .total
     @State private var timeStatType: TimeStatType = .minutes
+    @State private var subjectFilter: SubjectFilter = .all
 
     private var exploredSubjects: [Subject] {
         viewModel.subjects.filter { subject in
@@ -329,6 +346,37 @@ struct ProgressOverview: View {
                 "Day Streak", "\(viewModel.studyStreak)",
                 min(Double(viewModel.studyStreak) / Double(maxStreak), 1.0)
             )
+        }
+    }
+
+    private var filteredSubjects: [Subject] {
+        switch subjectFilter {
+        case .all:
+            return viewModel.subjects
+        case .completed:
+            return viewModel.subjects.filter { subject in
+                let progress = viewModel.getSubjectProgress(subject)
+                return progress >= 1.0
+            }
+        case .inProgress:
+            return viewModel.subjects.filter { subject in
+                let progress = viewModel.getSubjectProgress(subject)
+                return progress > 0 && progress < 1.0
+            }
+        case .notStarted:
+            return viewModel.subjects.filter { subject in
+                let progress = viewModel.getSubjectProgress(subject)
+                return progress == 0
+            }
+        }
+    }
+
+    private var emptyStateMessage: String {
+        switch subjectFilter {
+        case .all: return "No Subjects Available"
+        case .completed: return "No Completed Subjects"
+        case .inProgress: return "No Subjects In Progress"
+        case .notStarted: return "No Subjects to Start"
         }
     }
 
@@ -459,44 +507,62 @@ struct ProgressOverview: View {
                         .fontWeight(.bold)
                         .padding(.horizontal)
 
-                    let subjects =
-                        switch subjectStatType {
-                        case .total: viewModel.subjects
-                        case .explored: exploredSubjects
-                        case .completed: completedSubjects
+                    // Subject Filter
+                    Picker("Filter", selection: $subjectFilter) {
+                        ForEach(
+                            [SubjectFilter.all, .completed, .inProgress, .notStarted], id: \.self
+                        ) { filter in
+                            Text(filter.title)
+                                .tag(filter)
                         }
+                    }
+                    .pickerStyle(.segmented)
+                    .padding(.horizontal)
 
-                    ForEach(subjects) { subject in
-                        let progress = viewModel.getSubjectProgress(subject)
-                        VStack(alignment: .leading, spacing: 8) {
-                            HStack {
-                                Text(subject.name)
-                                    .font(.headline)
-                                Spacer()
-                                Text("\(Int(progress * 100))%")
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                            }
-
-                            GeometryReader { geometry in
-                                ZStack(alignment: .leading) {
-                                    Rectangle()
-                                        .fill(Color.gray.opacity(0.2))
-                                        .frame(height: 8)
-                                        .cornerRadius(4)
-
-                                    Rectangle()
-                                        .fill(Color.blue)
-                                        .frame(width: geometry.size.width * progress, height: 8)
-                                        .cornerRadius(4)
+                    if filteredSubjects.isEmpty {
+                        VStack(spacing: 12) {
+                            Image(systemName: "folder.badge.questionmark")
+                                .font(.system(size: 40))
+                                .foregroundColor(.gray)
+                            Text(emptyStateMessage)
+                                .font(.headline)
+                                .foregroundColor(.gray)
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 40)
+                    } else {
+                        ForEach(filteredSubjects) { subject in
+                            let progress = viewModel.getSubjectProgress(subject)
+                            VStack(alignment: .leading, spacing: 8) {
+                                HStack {
+                                    Text(subject.name)
+                                        .font(.headline)
+                                    Spacer()
+                                    Text("\(Int(progress * 100))%")
+                                        .font(.subheadline)
+                                        .foregroundColor(.secondary)
                                 }
+
+                                GeometryReader { geometry in
+                                    ZStack(alignment: .leading) {
+                                        Rectangle()
+                                            .fill(Color.gray.opacity(0.2))
+                                            .frame(height: 8)
+                                            .cornerRadius(4)
+
+                                        Rectangle()
+                                            .fill(Color.blue)
+                                            .frame(width: geometry.size.width * progress, height: 8)
+                                            .cornerRadius(4)
+                                    }
+                                }
+                                .frame(height: 8)
                             }
-                            .frame(height: 8)
+                            .padding()
+                            .background(Color(UIColor.systemBackground))
+                            .cornerRadius(12)
+                            .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
                         }
-                        .padding()
-                        .background(Color(UIColor.systemBackground))
-                        .cornerRadius(12)
-                        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
                     }
                 }
                 .padding(.horizontal)

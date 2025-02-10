@@ -99,6 +99,14 @@ service cloud.firestore {
         allow update: if isOwner(userId) && isValidCollection(request.resource.data);
         allow delete: if isOwner(userId);
       }
+
+      // Study notes subcollection
+      match /studyNotes/{noteId} {
+        allow read: if isOwner(userId);
+        allow create: if isOwner(userId);
+        allow update: if isOwner(userId);
+        allow delete: if isOwner(userId);
+      }
     }
     
     // Progress tracking - authenticated access only

@@ -13,10 +13,12 @@ class LibraryViewModel: ObservableObject {
     @Published var savedVideos: [SavedVideo] = []
     @Published var completedVideos: [Video] = []
     @Published var collections: [Collection] = []
+    @Published var studyNotes: [StudyNote] = []
     @Published var error: Error?
 
     private let userService = UserService.shared
     private let gridService = GridService()
+    private let studyNoteService = StudyNoteService.shared
     private var savedVideosManager: SavedVideosManager?
     private var collectionsManager: CollectionsManager?
     private var userListener: ListenerRegistration?
@@ -24,6 +26,7 @@ class LibraryViewModel: ObservableObject {
 
     init() {
         setupManagers()
+        loadStudyNotes()
     }
 
     deinit {
@@ -97,6 +100,23 @@ class LibraryViewModel: ObservableObject {
         }
     }
 
+    private func loadStudyNotes() {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+
+        Task {
+            do {
+                let notes = try await studyNoteService.getUserStudyNotes(userId: userId)
+                await MainActor.run {
+                    self.studyNotes = notes
+                }
+            } catch {
+                await MainActor.run {
+                    self.error = error
+                }
+            }
+        }
+    }
+
     func getVideosForCollection(_ collection: Collection) -> [Video] {
         return gridService.videos.filter { video in
             collection.videoIds.contains(video.id)
@@ -119,6 +139,11 @@ class LibraryViewModel: ObservableObject {
 
     func deleteCollection(_ collectionId: String) async throws {
         try await collectionsManager?.deleteCollection(withId: collectionId)
+    }
+
+    // Public method to get video by ID
+    func getVideo(id: String) -> Video? {
+        return gridService.videos.first { $0.id == id }
     }
 }
 
@@ -234,27 +259,38 @@ struct LibrarySection<Content: View>: View {
     let icon: String
     let count: Int
     let content: Content
+    let onHeaderTap: () -> Void
 
-    init(title: String, icon: String, count: Int, @ViewBuilder content: () -> Content) {
+    init(
+        title: String,
+        icon: String,
+        count: Int,
+        onHeaderTap: @escaping () -> Void,
+        @ViewBuilder content: () -> Content
+    ) {
         self.title = title
         self.icon = icon
         self.count = count
         self.content = content()
+        self.onHeaderTap = onHeaderTap
     }
 
     var body: some View {
         VStack(alignment: .leading) {
-            HStack {
-                Label(title, systemImage: icon)
-                    .font(.headline)
-                Spacer()
-                Text("\(count)")
-                    .foregroundColor(.gray)
-                Image(systemName: "chevron.right")
-                    .foregroundColor(.gray)
+            Button(action: onHeaderTap) {
+                HStack {
+                    Label(title, systemImage: icon)
+                        .font(.headline)
+                    Spacer()
+                    Text("\(count)")
+                        .foregroundColor(.gray)
+                    Image(systemName: "chevron.right")
+                        .foregroundColor(.gray)
+                }
+                .padding(.horizontal)
+                .padding(.vertical, 12)
             }
-            .padding(.horizontal)
-            .padding(.vertical, 12)
+            .buttonStyle(PlainButtonStyle())
 
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 15) {
@@ -268,7 +304,7 @@ struct LibrarySection<Content: View>: View {
 
 struct CollectionCard: View {
     let collection: Collection
-    let videos: [Video]
+    let viewModel: LibraryViewModel
 
     var body: some View {
         VStack(alignment: .leading) {
@@ -305,11 +341,516 @@ struct CollectionCard: View {
                 .lineLimit(2)
                 .foregroundColor(.primary)
 
-            Text("\(videos.count) videos")
+            Text("\(viewModel.getVideosForCollection(collection).count) videos")
                 .font(.caption2)
                 .foregroundColor(.secondary)
         }
         .frame(width: 160)
+    }
+}
+
+struct StudyNoteCard: View {
+    let note: StudyNote
+    let video: Video?
+    @State private var showingDetail = false
+
+    var body: some View {
+        Button(action: { showingDetail = true }) {
+            VStack(alignment: .leading, spacing: 8) {
+                if let video = video {
+                    AsyncImage(url: URL(string: video.metadata.thumbnailUrl)) { image in
+                        image
+                            .resizable()
+                            .aspectRatio(contentMode: .fill)
+                    } placeholder: {
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.2))
+                            .overlay(
+                                Image(systemName: "play.circle.fill")
+                                    .foregroundColor(.gray)
+                                    .font(.largeTitle)
+                            )
+                    }
+                    .frame(height: 90)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                    Text(video.title)
+                        .font(.headline)
+                        .lineLimit(1)
+                }
+
+                Text(note.originalText)
+                    .font(.body)
+                    .lineLimit(3)
+                    .foregroundColor(.primary)
+
+                if let summary = note.summary {
+                    Text("Summary: \(summary)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .lineLimit(2)
+                }
+
+                Text(formatDate(note.createdAt))
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+            .padding()
+            .background(Color(.systemBackground))
+            .cornerRadius(12)
+            .shadow(radius: 2)
+        }
+        .buttonStyle(PlainButtonStyle())
+        .sheet(isPresented: $showingDetail) {
+            NavigationView {
+                StudyNoteDetailView(note: note, video: video)
+            }
+        }
+    }
+
+    private func formatDate(_ date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateStyle = .medium
+        formatter.timeStyle = .short
+        return formatter.string(from: date)
+    }
+}
+
+struct SavedVideosSection: View {
+    let videos: [SavedVideo]
+    let viewModel: LibraryViewModel
+    @Binding var selectedSection: LibrarySectionType?
+
+    var body: some View {
+        if !videos.isEmpty {
+            LibrarySection(
+                title: "Saved Videos",
+                icon: "bookmark.fill",
+                count: videos.count,
+                onHeaderTap: { selectedSection = .savedVideos }
+            ) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: 16) {
+                        ForEach(videos) { video in
+                            SavedVideoCard(video: video, viewModel: viewModel)
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+            }
+        }
+    }
+}
+
+struct CompletedVideosSection: View {
+    let videos: [Video]
+    let viewModel: LibraryViewModel
+    @Binding var selectedSection: LibrarySectionType?
+
+    var body: some View {
+        if !videos.isEmpty {
+            LibrarySection(
+                title: "Completed Videos",
+                icon: "checkmark.circle.fill",
+                count: videos.count,
+                onHeaderTap: { selectedSection = .completedVideos }
+            ) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: 16) {
+                        ForEach(videos) { video in
+                            CompletedVideoCard(video: video, viewModel: viewModel)
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+            }
+        }
+    }
+}
+
+struct CollectionsSection: View {
+    let collections: [Collection]
+    let viewModel: LibraryViewModel
+    @Binding var selectedSection: LibrarySectionType?
+
+    var body: some View {
+        if !collections.isEmpty {
+            LibrarySection(
+                title: "Collections",
+                icon: "folder.fill",
+                count: collections.count,
+                onHeaderTap: { selectedSection = .collections }
+            ) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: 16) {
+                        ForEach(collections) { collection in
+                            CollectionCard(collection: collection, viewModel: viewModel)
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+            }
+        }
+    }
+}
+
+struct StudyNotesSection: View {
+    let notes: [StudyNote]
+    let viewModel: LibraryViewModel
+    @Binding var selectedSection: LibrarySectionType?
+
+    var body: some View {
+        if !notes.isEmpty {
+            LibrarySection(
+                title: "Study Notes",
+                icon: "note.text",
+                count: notes.count,
+                onHeaderTap: { selectedSection = .studyNotes }
+            ) {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: 16) {
+                        ForEach(notes) { note in
+                            StudyNoteCard(
+                                note: note,
+                                video: viewModel.getVideo(id: note.videoId)
+                            )
+                            .frame(width: 300)
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+            }
+        }
+    }
+}
+
+enum LibrarySectionType: Identifiable {
+    case savedVideos
+    case completedVideos
+    case collections
+    case studyNotes
+
+    var id: Int {
+        switch self {
+        case .savedVideos: return 0
+        case .completedVideos: return 1
+        case .collections: return 2
+        case .studyNotes: return 3
+        }
+    }
+}
+
+struct SavedVideosFullView: View {
+    let videos: [SavedVideo]
+    let viewModel: LibraryViewModel
+    @State private var searchText = ""
+    @State private var selectedSubject: String?
+    @State private var sortOption: SortOption = .dateDesc
+    @State private var showingFilterSheet = false
+
+    enum SortOption {
+        case dateAsc
+        case dateDesc
+        case titleAsc
+        case titleDesc
+        case subject
+        case levelAsc
+        case levelDesc
+
+        var label: String {
+            switch self {
+            case .dateAsc: return "Date (Oldest)"
+            case .dateDesc: return "Date (Newest)"
+            case .titleAsc: return "Title (A-Z)"
+            case .titleDesc: return "Title (Z-A)"
+            case .subject: return "Subject"
+            case .levelAsc: return "Level (Low to High)"
+            case .levelDesc: return "Level (High to Low)"
+            }
+        }
+    }
+
+    private var subjects: [String] {
+        Array(Set(videos.map { $0.subject })).sorted()
+    }
+
+    private var filteredVideos: [SavedVideo] {
+        var result = videos
+
+        // Apply subject filter
+        if let subject = selectedSubject {
+            result = result.filter { $0.subject == subject }
+        }
+
+        // Apply search filter
+        if !searchText.isEmpty {
+            result = result.filter { $0.title.localizedCaseInsensitiveContains(searchText) }
+        }
+
+        // Apply sorting
+        return result.sorted { (first: SavedVideo, second: SavedVideo) in
+            switch sortOption {
+            case .dateAsc:
+                return first.savedAt < second.savedAt
+            case .dateDesc:
+                return first.savedAt > second.savedAt
+            case .titleAsc:
+                return first.title < second.title
+            case .titleDesc:
+                return first.title > second.title
+            case .subject:
+                return first.subject < second.subject
+            case .levelAsc:
+                let firstLevel = first.complexityLevel ?? 0
+                let secondLevel = second.complexityLevel ?? 0
+                print(
+                    "Comparing levels: \(first.title) (\(firstLevel)) < \(second.title) (\(secondLevel))"
+                )
+                return firstLevel < secondLevel
+            case .levelDesc:
+                let firstLevel = first.complexityLevel ?? 0
+                let secondLevel = second.complexityLevel ?? 0
+                print(
+                    "Comparing levels: \(first.title) (\(firstLevel)) > \(second.title) (\(secondLevel))"
+                )
+                return firstLevel > secondLevel
+            }
+        }
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            // Search and filter bar
+            HStack {
+                Image(systemName: "magnifyingglass")
+                    .foregroundColor(.gray)
+                TextField("Search videos", text: $searchText)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+
+                Menu {
+                    ForEach(SortOption.allCases, id: \.label) { option in
+                        Button(action: { sortOption = option }) {
+                            HStack {
+                                Text(option.label)
+                                if sortOption == option {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                } label: {
+                    Image(systemName: "arrow.up.arrow.down")
+                        .foregroundColor(.blue)
+                }
+
+                Button(action: { showingFilterSheet = true }) {
+                    Image(systemName: "line.3.horizontal.decrease.circle")
+                        .foregroundColor(.blue)
+                }
+            }
+            .padding()
+            .background(Color(.systemBackground))
+
+            // Filter chips
+            if selectedSubject != nil {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack {
+                        if let subject = selectedSubject {
+                            FilterChip(text: subject) {
+                                selectedSubject = nil
+                            }
+                        }
+                    }
+                    .padding(.horizontal)
+                }
+                .padding(.vertical, 8)
+            }
+
+            // Videos grid
+            ScrollView {
+                LazyVGrid(
+                    columns: [
+                        GridItem(.adaptive(minimum: 160), spacing: 16)
+                    ],
+                    spacing: 16
+                ) {
+                    ForEach(filteredVideos) { video in
+                        NavigationLink(
+                            destination: VideoPlayerView(
+                                video: viewModel.getVideo(id: video.id) ?? video.toVideo(),
+                                isCurrent: true)
+                        ) {
+                            SavedVideoCard(video: video, viewModel: viewModel)
+                        }
+                        .buttonStyle(PlainButtonStyle())
+                    }
+                }
+                .padding()
+            }
+        }
+        .navigationTitle("Saved Videos")
+        .sheet(isPresented: $showingFilterSheet) {
+            FilterSheet(selectedSubject: $selectedSubject, subjects: subjects)
+        }
+    }
+}
+
+struct FilterChip: View {
+    let text: String
+    let onRemove: () -> Void
+
+    var body: some View {
+        HStack(spacing: 4) {
+            Text(text)
+                .font(.subheadline)
+            Button(action: onRemove) {
+                Image(systemName: "xmark.circle.fill")
+                    .foregroundColor(.gray)
+            }
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
+        .background(Color(.systemGray6))
+        .cornerRadius(16)
+    }
+}
+
+struct FilterSheet: View {
+    @Environment(\.dismiss) var dismiss
+    @Binding var selectedSubject: String?
+    let subjects: [String]
+
+    var body: some View {
+        NavigationView {
+            List {
+                Section(header: Text("Subject")) {
+                    ForEach(subjects, id: \.self) { subject in
+                        Button(action: {
+                            selectedSubject = subject
+                            dismiss()
+                        }) {
+                            HStack {
+                                Text(subject)
+                                Spacer()
+                                if selectedSubject == subject {
+                                    Image(systemName: "checkmark")
+                                        .foregroundColor(.blue)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Filter Videos")
+            .navigationBarItems(
+                leading: Button("Reset") {
+                    selectedSubject = nil
+                    dismiss()
+                },
+                trailing: Button("Done") {
+                    dismiss()
+                }
+            )
+        }
+    }
+}
+
+extension SavedVideosFullView.SortOption: CaseIterable {
+    static var allCases: [SavedVideosFullView.SortOption] = [
+        .dateDesc,
+        .dateAsc,
+        .titleAsc,
+        .titleDesc,
+        .subject,
+        .levelDesc,
+        .levelAsc,
+    ]
+}
+
+// Update the SavedVideo extension
+extension SavedVideo {
+    func toVideo() -> Video {
+        return Video(
+            id: id,
+            title: title,
+            description: "",  // Add description if available in SavedVideo
+            subject: subject,
+            complexityLevel: complexityLevel ?? 1,  // Use the complexity level or default to 1
+            metadata: VideoMetadata(
+                duration: Int(duration),  // Convert TimeInterval to Int
+                views: 0,
+                thumbnailUrl: thumbnailURL,
+                createdAt: savedAt,
+                videoUrl: videoURL,
+                storagePath: ""
+            ),
+            position: Position(x: 0, y: 0),
+            isActive: true
+        )
+    }
+}
+
+struct CompletedVideosFullView: View {
+    let videos: [Video]
+    let viewModel: LibraryViewModel
+
+    var body: some View {
+        ScrollView {
+            LazyVGrid(
+                columns: [
+                    GridItem(.adaptive(minimum: 160), spacing: 16)
+                ], spacing: 16
+            ) {
+                ForEach(videos) { video in
+                    CompletedVideoCard(video: video, viewModel: viewModel)
+                }
+            }
+            .padding()
+        }
+        .navigationTitle("Completed Videos")
+    }
+}
+
+struct CollectionsFullView: View {
+    let collections: [Collection]
+    let viewModel: LibraryViewModel
+
+    var body: some View {
+        ScrollView {
+            LazyVGrid(
+                columns: [
+                    GridItem(.adaptive(minimum: 160), spacing: 16)
+                ], spacing: 16
+            ) {
+                ForEach(collections) { collection in
+                    CollectionCard(collection: collection, viewModel: viewModel)
+                }
+            }
+            .padding()
+        }
+        .navigationTitle("Collections")
+    }
+}
+
+struct StudyNotesFullView: View {
+    let notes: [StudyNote]
+    let viewModel: LibraryViewModel
+
+    var body: some View {
+        ScrollView {
+            LazyVStack(spacing: 16) {
+                ForEach(notes) { note in
+                    StudyNoteCard(
+                        note: note,
+                        video: viewModel.getVideo(id: note.videoId)
+                    )
+                    .frame(maxWidth: .infinity)
+                    .padding(.horizontal)
+                }
+            }
+            .padding(.vertical)
+        }
+        .navigationTitle("Study Notes")
     }
 }
 
@@ -320,81 +861,134 @@ struct LibraryView: View {
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 24) {
-                HStack {
-                    Text("My Library")
-                        .font(.largeTitle)
-                        .bold()
-                    Spacer()
-                }
-                .padding(.horizontal)
-
-                // Saved Videos
-                LibrarySection(
-                    title: "Saved Videos",
-                    icon: "bookmark.fill",
-                    count: viewModel.savedVideos.count
-                ) {
-                    ForEach(viewModel.savedVideos) { video in
-                        SavedVideoCard(video: video, viewModel: viewModel)
-                    }
-                }
-
-                // My Collections
-                NavigationLink(destination: CollectionsView(viewModel: viewModel)) {
-                    LibrarySection(
-                        title: "My Collections",
-                        icon: "folder.fill",
-                        count: viewModel.collections.count
+            VStack(spacing: 24) {
+                // Saved Videos Section
+                if !viewModel.savedVideos.isEmpty {
+                    NavigationLink(
+                        destination: SavedVideosFullView(
+                            videos: viewModel.savedVideos, viewModel: viewModel)
                     ) {
-                        ForEach(viewModel.collections) { collection in
-                            let collectionVideos = viewModel.getVideosForCollection(collection)
-                            CollectionCard(collection: collection, videos: collectionVideos)
+                        HStack {
+                            Label("Saved Videos", systemImage: "bookmark.fill")
+                                .font(.headline)
+                            Spacer()
+                            Text("\(viewModel.savedVideos.count)")
+                                .foregroundColor(.gray)
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.gray)
                         }
+                        .padding(.horizontal)
+                        .padding(.vertical, 12)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        LazyHStack(spacing: 16) {
+                            ForEach(viewModel.savedVideos) { video in
+                                SavedVideoCard(video: video, viewModel: viewModel)
+                            }
+                        }
+                        .padding(.horizontal)
                     }
                 }
 
-                // Study Notes
-                LibrarySection(title: "Study Notes", icon: "note.text", count: 5) {
-                    ForEach(0..<5) { _ in
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.gray.opacity(0.2))
-                            .frame(width: 160, height: 90)
-                            .overlay(
-                                Image(systemName: "note.text")
-                                    .foregroundColor(.gray)
-                                    .font(.largeTitle)
-                            )
+                // Completed Videos Section
+                if !viewModel.completedVideos.isEmpty {
+                    NavigationLink(
+                        destination: CompletedVideosFullView(
+                            videos: viewModel.completedVideos, viewModel: viewModel)
+                    ) {
+                        HStack {
+                            Label("Completed Videos", systemImage: "checkmark.circle.fill")
+                                .font(.headline)
+                            Spacer()
+                            Text("\(viewModel.completedVideos.count)")
+                                .foregroundColor(.gray)
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.gray)
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 12)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        LazyHStack(spacing: 16) {
+                            ForEach(viewModel.completedVideos) { video in
+                                CompletedVideoCard(video: video, viewModel: viewModel)
+                            }
+                        }
+                        .padding(.horizontal)
                     }
                 }
 
-                // Continue Watching
-                LibrarySection(title: "Continue Watching", icon: "play.circle", count: 3) {
-                    ForEach(0..<3) { _ in
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color.gray.opacity(0.2))
-                            .frame(width: 160, height: 90)
-                            .overlay(
-                                Image(systemName: "play.circle.fill")
-                                    .foregroundColor(.gray)
-                                    .font(.largeTitle)
-                            )
+                // Collections Section
+                if !viewModel.collections.isEmpty {
+                    NavigationLink(
+                        destination: CollectionsFullView(
+                            collections: viewModel.collections, viewModel: viewModel)
+                    ) {
+                        HStack {
+                            Label("Collections", systemImage: "folder.fill")
+                                .font(.headline)
+                            Spacer()
+                            Text("\(viewModel.collections.count)")
+                                .foregroundColor(.gray)
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.gray)
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 12)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        LazyHStack(spacing: 16) {
+                            ForEach(viewModel.collections) { collection in
+                                CollectionCard(collection: collection, viewModel: viewModel)
+                            }
+                        }
+                        .padding(.horizontal)
                     }
                 }
 
-                // Completed Videos
-                LibrarySection(
-                    title: "Completed Videos",
-                    icon: "checkmark.circle.fill",
-                    count: viewModel.completedVideos.count
-                ) {
-                    ForEach(viewModel.completedVideos) { video in
-                        CompletedVideoCard(video: video, viewModel: viewModel)
+                // Study Notes Section
+                if !viewModel.studyNotes.isEmpty {
+                    NavigationLink(
+                        destination: StudyNotesFullView(
+                            notes: viewModel.studyNotes, viewModel: viewModel)
+                    ) {
+                        HStack {
+                            Label("Study Notes", systemImage: "note.text")
+                                .font(.headline)
+                            Spacer()
+                            Text("\(viewModel.studyNotes.count)")
+                                .foregroundColor(.gray)
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.gray)
+                        }
+                        .padding(.horizontal)
+                        .padding(.vertical, 12)
+                    }
+                    .buttonStyle(PlainButtonStyle())
+
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        LazyHStack(spacing: 16) {
+                            ForEach(viewModel.studyNotes) { note in
+                                StudyNoteCard(
+                                    note: note,
+                                    video: viewModel.getVideo(id: note.videoId)
+                                )
+                                .frame(width: 300)
+                            }
+                        }
+                        .padding(.horizontal)
                     }
                 }
             }
             .padding(.vertical)
         }
+        .navigationTitle("Library")
         .sheet(isPresented: $showingNewCollectionSheet) {
             NewCollectionSheet(viewModel: viewModel)
         }

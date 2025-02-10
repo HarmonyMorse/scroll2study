@@ -47,6 +47,10 @@ Instead of an infinite feed, the app uses a **preset "grid" of topics** built by
    - AI generates lesson plans based on the user's progress and interests.
    - Lesson plans include a list of videos to watch, in order, and a suggested schedule for how long to spend on each video.
 
+4. **Study Notes Summarizer**
+   - AI generates summaries of the user's study notes.
+   - The summaries can then be used to create a new quiz.
+
 ## Technical Stack
 - **Frontend**:  
   - **Swift** and **SwiftUI** for iOS development (native).

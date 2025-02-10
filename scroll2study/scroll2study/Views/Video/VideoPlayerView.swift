@@ -21,7 +21,17 @@ struct VideoPlayerView: View {
     @State private var showProgressBar = false
     @State private var hasBeenWatched = false  // Track if video has been watched
     @State private var showStudyNotes = false
+    @State private var showCelebration = false  // New state for celebration popup
+    @State private var celebrationMessage: String = ""  // Store the selected message
     private let availableSpeeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
+    private let messages = [
+        "Great job! 🎉",
+        "You're crushing it! 💪",
+        "Knowledge gained! 🧠",
+        "Keep up the momentum! 🚀",
+        "Learning champion! 🏆",
+        "You're on fire! 🔥",
+    ]
 
     private func checkWatchStatus() {
         guard let userId = Auth.auth().currentUser?.uid else { return }
@@ -70,6 +80,17 @@ struct VideoPlayerView: View {
                                     ProgressView()
                                         .scaleEffect(1.5)
                                 }
+                            }
+                        }
+                    )
+                    .overlay(
+                        Group {
+                            if showCelebration {
+                                CelebrationView(
+                                    message: celebrationMessage,
+                                    isPresented: $showCelebration
+                                )
+                                .transition(.opacity)
                             }
                         }
                     )
@@ -438,6 +459,13 @@ struct VideoPlayerView: View {
                 if duration > 0 {
                     Task { @MainActor in
                         self.duration = duration
+                        if !self.hasBeenWatched {
+                            self.celebrationMessage =
+                                self.messages.randomElement() ?? "Great job! 🎉"
+                            withAnimation {
+                                self.showCelebration = true
+                            }
+                        }
                         self.hasBeenWatched = true  // Mark as watched when video completes
                     }
                 }
@@ -551,6 +579,30 @@ struct SpeedPickerView: View {
             }
         }
         .presentationDetents([.medium])
+    }
+}
+
+struct CelebrationView: View {
+    let message: String
+    @Binding var isPresented: Bool
+
+    var body: some View {
+        GeometryReader { geometry in
+            Color.green
+                .overlay(
+                    Text(message)
+                        .font(.system(size: 32, weight: .bold))
+                        .foregroundColor(.white)
+                        .multilineTextAlignment(.center)
+                        .padding()
+                )
+                .edgesIgnoringSafeArea(.all)
+                .onTapGesture {
+                    withAnimation {
+                        isPresented = false
+                    }
+                }
+        }
     }
 }
 

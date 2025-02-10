@@ -1,16 +1,83 @@
 import FirebaseAuth
+import Foundation
 import SwiftUI
+import os
 
-struct VideoStudyNotesView: View {
-    let video: Video
+private let logger = Logger(
+    subsystem: Bundle.main.bundleIdentifier ?? "scroll2study",
+    category: "StandaloneStudyNoteView"
+)
+
+// Add a configuration struct to handle API keys
+struct Configuration {
+    static var openAIKey: String {
+        // First try to get from environment
+        logger.debug("Checking environment variables for OPENAI_API_KEY")
+        if let key = ProcessInfo.processInfo.environment["OPENAI_API_KEY"] {
+            logger.debug("Found API key in environment variables")
+            return key
+        }
+
+        // Then try to get from a plist if exists
+        logger.debug("Checking Config.plist")
+        if let path = Bundle.main.path(forResource: "Config", ofType: "plist") {
+            logger.debug("Found Config.plist at path: \(path)")
+            if let dict = NSDictionary(contentsOfFile: path) {
+                logger.debug("Loaded Config.plist dictionary")
+                if let key = dict["OPENAI_API_KEY"] as? String {
+                    logger.debug("Found API key in Config.plist")
+                    return key
+                } else {
+                    logger.error("No OPENAI_API_KEY found in Config.plist")
+                }
+            } else {
+                logger.error("Failed to load Config.plist as dictionary")
+            }
+        } else {
+            logger.error("Config.plist not found in bundle")
+            // Print all resources in bundle for debugging
+            if let resourcePath = Bundle.main.resourcePath {
+                let fileManager = FileManager.default
+                if let files = try? fileManager.contentsOfDirectory(atPath: resourcePath) {
+                    logger.debug("Bundle contents: \(files.joined(separator: ", "))")
+                }
+            }
+        }
+
+        // Finally, return from .env file if exists
+        logger.debug("Checking .env file")
+        if let envPath = Bundle.main.path(forResource: ".env", ofType: nil) {
+            logger.debug("Found .env at path: \(envPath)")
+            if let contents = try? String(contentsOfFile: envPath, encoding: .utf8) {
+                logger.debug("Loaded .env contents")
+                let lines = contents.components(separatedBy: .newlines)
+                for line in lines {
+                    if line.hasPrefix("OPENAI_API_KEY=") {
+                        logger.debug("Found API key in .env file")
+                        let key = String(line.dropFirst("OPENAI_API_KEY=".count))
+                        return key
+                    }
+                }
+                logger.error("No OPENAI_API_KEY found in .env contents")
+            } else {
+                logger.error("Failed to read .env file contents")
+            }
+        } else {
+            logger.error(".env file not found in bundle")
+        }
+
+        logger.error("No API key found in any location")
+        return ""
+    }
+}
+
+struct StandaloneStudyNoteView: View {
     @Environment(\.dismiss) private var dismiss
     @StateObject private var authManager = AuthenticationManager.shared
     @State private var noteText: String = ""
-    @State private var notes: [StudyNote] = []
     @State private var isLoading: Bool = false
-    @State private var isSummarizing: Bool = false
     @State private var errorMessage: String?
-    @State private var selectedNote: StudyNote?
+    @State private var isSummarizing: Bool = false
 
     private let studyNoteService = StudyNoteService.shared
     @Web private var web
@@ -69,49 +136,10 @@ struct VideoStudyNotesView: View {
                         .padding()
                 }
 
-                // List of existing notes
-                if authManager.isAuthenticated {
-                    List(notes) { note in
-                        Button(action: {
-                            showNoteDetail(note)
-                        }) {
-                            VStack(alignment: .leading, spacing: 8) {
-                                Text(note.originalText)
-                                    .font(.body)
-                                    .lineLimit(2)
-                                    .foregroundColor(.primary)
-
-                                if let summary = note.summary {
-                                    Text("Summary:")
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                    Text(summary)
-                                        .font(.body)
-                                        .foregroundColor(.secondary)
-                                }
-
-                                Text(formatDate(note.createdAt))
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
-                            }
-                            .padding(.vertical, 4)
-                        }
-                    }
-                    .sheet(item: $selectedNote) { note in
-                        NavigationView {
-                            StudyNoteDetailView(note: note, video: video)
-                        }
-                    }
-                } else {
-                    Spacer()
-                    Text("Please sign in to view and create notes")
-                        .foregroundColor(.secondary)
-                    Spacer()
-                }
+                Spacer()
             }
-            .navigationTitle("Notes for \(video.title)")
+            .navigationTitle("New Study Note")
             .navigationBarItems(trailing: Button("Done") { dismiss() })
-            .onAppear(perform: loadNotes)
         }
     }
 
@@ -124,14 +152,13 @@ struct VideoStudyNotesView: View {
             do {
                 _ = try await studyNoteService.createStudyNote(
                     userId: userId,
-                    videoId: video.id,
+                    videoId: "",  // No video associated
                     originalText: noteText
                 )
 
-                // Clear the text and reload notes
                 await MainActor.run {
                     noteText = ""
-                    loadNotes()
+                    dismiss()
                 }
             } catch {
                 await MainActor.run {
@@ -152,8 +179,17 @@ struct VideoStudyNotesView: View {
 
         Task {
             do {
-                // Call OpenAI API directly
-                let apiKey = ProcessInfo.processInfo.environment["OPENAI_API_KEY"] ?? ""
+                // Use the Configuration struct to get the API key
+                let apiKey = Configuration.openAIKey
+                if apiKey.isEmpty {
+                    throw NSError(
+                        domain: "", code: -1,
+                        userInfo: [
+                            NSLocalizedDescriptionKey:
+                                "OpenAI API key not found. Please add it to Config.plist or set OPENAI_API_KEY in environment variables."
+                        ])
+                }
+
                 let response = try await web.post(
                     "https://api.openai.com/v1/chat/completions",
                     headers: [
@@ -180,12 +216,15 @@ struct VideoStudyNotesView: View {
                 guard let summary = response["choices"]["0"]["message"]["content"].string else {
                     throw NSError(
                         domain: "", code: -1,
-                        userInfo: [NSLocalizedDescriptionKey: "Failed to generate summary"])
+                        userInfo: [
+                            NSLocalizedDescriptionKey:
+                                "Failed to parse summary from OpenAI response"
+                        ])
                 }
 
                 let note = try await studyNoteService.createStudyNote(
                     userId: userId,
-                    videoId: video.id,
+                    videoId: "",  // No video associated
                     originalText: noteText
                 )
 
@@ -197,7 +236,11 @@ struct VideoStudyNotesView: View {
 
                 await MainActor.run {
                     noteText = ""
-                    loadNotes()
+                    dismiss()
+                }
+            } catch let error as WebError {
+                await MainActor.run {
+                    errorMessage = "OpenAI API Error: \(error.localizedDescription)"
                 }
             } catch {
                 await MainActor.run {
@@ -211,68 +254,8 @@ struct VideoStudyNotesView: View {
             }
         }
     }
-
-    private func loadNotes() {
-        guard let userId = Auth.auth().currentUser?.uid else {
-            notes = []
-            return
-        }
-
-        isLoading = true
-        errorMessage = nil
-
-        Task {
-            do {
-                let loadedNotes = try await studyNoteService.getVideoStudyNotes(
-                    userId: userId,
-                    videoId: video.id
-                )
-
-                await MainActor.run {
-                    notes = loadedNotes
-                }
-            } catch {
-                await MainActor.run {
-                    errorMessage = "Failed to load notes: \(error.localizedDescription)"
-                }
-            }
-
-            await MainActor.run {
-                isLoading = false
-            }
-        }
-    }
-
-    private func formatDate(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateStyle = .medium
-        formatter.timeStyle = .short
-        return formatter.string(from: date)
-    }
-
-    private func showNoteDetail(_ note: StudyNote) {
-        selectedNote = note
-    }
 }
 
 #Preview {
-    VideoStudyNotesView(
-        video: Video(
-            id: "preview",
-            title: "Sample Video",
-            description: "A sample video",
-            subject: "Math",
-            complexityLevel: 1,
-            metadata: VideoMetadata(
-                duration: 300,
-                views: 0,
-                thumbnailUrl: "",
-                createdAt: Date(),
-                videoUrl: "",
-                storagePath: ""
-            ),
-            position: Position(x: 0, y: 0),
-            isActive: true
-        )
-    )
+    StandaloneStudyNoteView()
 }

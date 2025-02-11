@@ -111,6 +111,7 @@ struct CollectionDetailView: View {
     let collection: Collection
     @State private var showingDeleteAlert = false
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject private var videoSelection: VideoSelectionState
 
     var body: some View {
         let videos = viewModel.getVideosForCollection(collection)
@@ -125,41 +126,47 @@ struct CollectionDetailView: View {
 
             Section {
                 ForEach(videos) { video in
-                    HStack {
-                        // Gradient thumbnail with timestamp and level
-                        ZStack {
-                            LinearGradient(
-                                gradient: Gradient(colors: [
-                                    Color.blue.opacity(0.3), Color.purple.opacity(0.3),
-                                ]),
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
+                    Button(action: {
+                        videoSelection.selectedVideo = video
+                        videoSelection.shouldNavigateToVideo = true
+                    }) {
+                        HStack {
+                            // Gradient thumbnail with timestamp and level
+                            ZStack {
+                                LinearGradient(
+                                    gradient: Gradient(colors: [
+                                        Color.blue.opacity(0.3), Color.purple.opacity(0.3),
+                                    ]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
 
-                            VStack(spacing: 2) {
-                                Text("Level \(video.complexityLevel)")
-                                    .font(.caption2)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.white)
-                                Text(formatDuration(video.metadata.duration))
-                                    .font(.caption2)
-                                    .fontWeight(.medium)
-                                    .foregroundColor(.white)
-                                    .monospacedDigit()
+                                VStack(spacing: 2) {
+                                    Text("Level \(video.complexityLevel)")
+                                        .font(.caption2)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.white)
+                                    Text(formatDuration(video.metadata.duration))
+                                        .font(.caption2)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.white)
+                                        .monospacedDigit()
+                                }
                             }
-                        }
-                        .frame(width: 80, height: 45)
-                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                            .frame(width: 80, height: 45)
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
 
-                        VStack(alignment: .leading) {
-                            Text(video.title)
-                                .font(.headline)
-                            Text(video.subject)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+                            VStack(alignment: .leading) {
+                                Text(video.title)
+                                    .font(.headline)
+                                Text(video.subject)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.leading, 8)
                         }
-                        .padding(.leading, 8)
                     }
+                    .buttonStyle(PlainButtonStyle())
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
                             Task {

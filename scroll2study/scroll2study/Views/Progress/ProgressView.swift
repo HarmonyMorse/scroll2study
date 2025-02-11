@@ -797,10 +797,7 @@ struct VideoProgressView: View {
                 ProgressOverview(viewModel: viewModel)
                     .navigationBarTitleDisplayMode(.inline)
             case .achievements:
-                VStack {
-                    Text("Achievements Coming Soon")
-                        .font(.title)
-                }
+                AchievementsView()
             }
         }
         .navigationTitle(

@@ -126,13 +126,27 @@ struct CollectionDetailView: View {
             Section {
                 ForEach(videos) { video in
                     HStack {
-                        AsyncImage(url: URL(string: video.metadata.thumbnailUrl)) { image in
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                        } placeholder: {
-                            Rectangle()
-                                .fill(Color.gray.opacity(0.2))
+                        // Gradient thumbnail with timestamp and level
+                        ZStack {
+                            LinearGradient(
+                                gradient: Gradient(colors: [
+                                    Color.blue.opacity(0.3), Color.purple.opacity(0.3),
+                                ]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+
+                            VStack(spacing: 2) {
+                                Text("Level \(video.complexityLevel)")
+                                    .font(.caption2)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.white)
+                                Text(formatDuration(video.metadata.duration))
+                                    .font(.caption2)
+                                    .fontWeight(.medium)
+                                    .foregroundColor(.white)
+                                    .monospacedDigit()
+                            }
                         }
                         .frame(width: 80, height: 45)
                         .clipShape(RoundedRectangle(cornerRadius: 4))
@@ -182,5 +196,11 @@ struct CollectionDetailView: View {
         } message: {
             Text("Are you sure you want to delete this collection? This action cannot be undone.")
         }
+    }
+
+    private func formatDuration(_ duration: Int) -> String {
+        let minutes = duration / 60
+        let seconds = duration % 60
+        return String(format: "%d:%02d", minutes, seconds)
     }
 }

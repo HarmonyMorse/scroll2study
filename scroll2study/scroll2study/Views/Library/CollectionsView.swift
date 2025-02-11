@@ -112,9 +112,11 @@ struct CollectionDetailView: View {
     @State private var showingDeleteAlert = false
     @Environment(\.dismiss) var dismiss
     @EnvironmentObject private var videoSelection: VideoSelectionState
+    @State private var hideCompleted = false
 
     var body: some View {
         let videos = viewModel.getVideosForCollection(collection)
+        let filteredVideos = hideCompleted ? videos.filter { !viewModel.isVideoCompleted($0.id) } : videos
 
         List {
             Section {
@@ -125,7 +127,12 @@ struct CollectionDetailView: View {
             }
 
             Section {
-                ForEach(videos) { video in
+                Toggle("Hide Completed Videos", isOn: $hideCompleted)
+                    .padding(.vertical, 4)
+            }
+
+            Section {
+                ForEach(filteredVideos) { video in
                     Button(action: {
                         videoSelection.selectedVideo = video
                         videoSelection.shouldNavigateToVideo = true
@@ -155,6 +162,17 @@ struct CollectionDetailView: View {
                             }
                             .frame(width: 80, height: 45)
                             .clipShape(RoundedRectangle(cornerRadius: 4))
+                            .overlay(
+                                Group {
+                                    if viewModel.isVideoCompleted(video.id) {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundColor(.green)
+                                            .font(.system(size: 16))
+                                            .padding(4)
+                                    }
+                                },
+                                alignment: .topTrailing
+                            )
 
                             VStack(alignment: .leading) {
                                 Text(video.title)
@@ -179,7 +197,7 @@ struct CollectionDetailView: View {
                     }
                 }
             } header: {
-                Text("Videos")
+                Text("Videos (\(filteredVideos.count))")
             }
         }
         .navigationTitle(collection.name)

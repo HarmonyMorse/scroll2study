@@ -148,4 +148,9 @@ class LibraryViewModel: ObservableObject {
     func getVideo(id: String) -> Video? {
         return gridService.videos.first { $0.id == id }
     }
+
+    // Check if a video is completed
+    func isVideoCompleted(_ videoId: String) -> Bool {
+        return completedVideos.contains { $0.id == videoId }
+    }
 }

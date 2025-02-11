@@ -154,33 +154,38 @@ struct SavedVideoCard: View {
 
     var body: some View {
         VStack(alignment: .leading) {
-            AsyncImage(url: URL(string: video.thumbnailURL)) { image in
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } placeholder: {
-                Rectangle()
-                    .fill(Color.gray.opacity(0.2))
-                    .overlay(
-                        Image(systemName: "play.circle.fill")
-                            .foregroundColor(.gray)
-                            .font(.largeTitle)
-                    )
+            // Gradient background instead of thumbnail
+            ZStack {
+                LinearGradient(
+                    gradient: Gradient(colors: [Color.blue.opacity(0.3), Color.purple.opacity(0.3)]
+                    ),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+
+                VStack(spacing: 4) {
+                    Text(video.title)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
+                    Text(formatDuration(video.duration))
+                        .font(.caption2)
+                        .foregroundColor(.white)
+                        .monospacedDigit()
+                }
+                .padding(.horizontal, 8)
             }
             .frame(width: 160, height: 90)
             .clipShape(RoundedRectangle(cornerRadius: 8))
-
-            Text(video.title)
-                .font(.caption)
-                .lineLimit(2)
-                .foregroundColor(.primary)
 
             Text(video.subject)
                 .font(.caption2)
                 .foregroundColor(.secondary)
 
             HStack {
-                Text(video.subject)
+                Text("Level \(video.complexityLevel ?? 1)")
                     .font(.caption2)
                     .foregroundColor(.secondary)
                 Spacer()
@@ -195,6 +200,12 @@ struct SavedVideoCard: View {
             AddToCollectionSheet(viewModel: viewModel, videoId: video.id)
         }
     }
+
+    private func formatDuration(_ duration: TimeInterval) -> String {
+        let minutes = Int(duration) / 60
+        let seconds = Int(duration) % 60
+        return String(format: "%d:%02d", minutes, seconds)
+    }
 }
 
 struct CompletedVideoCard: View {
@@ -204,18 +215,28 @@ struct CompletedVideoCard: View {
 
     var body: some View {
         VStack(alignment: .leading) {
-            AsyncImage(url: URL(string: video.metadata.thumbnailUrl)) { image in
-                image
-                    .resizable()
-                    .aspectRatio(contentMode: .fill)
-            } placeholder: {
-                Rectangle()
-                    .fill(Color.gray.opacity(0.2))
-                    .overlay(
-                        Image(systemName: "play.circle.fill")
-                            .foregroundColor(.gray)
-                            .font(.largeTitle)
-                    )
+            // Gradient background instead of thumbnail
+            ZStack {
+                LinearGradient(
+                    gradient: Gradient(colors: [Color.blue.opacity(0.3), Color.purple.opacity(0.3)]
+                    ),
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+
+                VStack(spacing: 4) {
+                    Text(video.title)
+                        .font(.caption)
+                        .fontWeight(.medium)
+                        .foregroundColor(.white)
+                        .lineLimit(2)
+                        .multilineTextAlignment(.center)
+                    Text(formatDuration(video.metadata.duration))
+                        .font(.caption2)
+                        .foregroundColor(.white)
+                        .monospacedDigit()
+                }
+                .padding(.horizontal, 8)
             }
             .frame(width: 160, height: 90)
             .clipShape(RoundedRectangle(cornerRadius: 8))
@@ -227,17 +248,12 @@ struct CompletedVideoCard: View {
                 alignment: .topTrailing
             )
 
-            Text(video.title)
-                .font(.caption)
-                .lineLimit(2)
-                .foregroundColor(.primary)
-
             Text(video.subject)
                 .font(.caption2)
                 .foregroundColor(.secondary)
 
             HStack {
-                Text(video.subject)
+                Text("Level \(video.complexityLevel)")
                     .font(.caption2)
                     .foregroundColor(.secondary)
                 Spacer()
@@ -251,6 +267,12 @@ struct CompletedVideoCard: View {
         .sheet(isPresented: $showingCollectionSheet) {
             AddToCollectionSheet(viewModel: viewModel, videoId: video.id)
         }
+    }
+
+    private func formatDuration(_ duration: Int) -> String {
+        let minutes = duration / 60
+        let seconds = duration % 60
+        return String(format: "%d:%02d", minutes, seconds)
     }
 }
 
@@ -357,37 +379,45 @@ struct StudyNoteCard: View {
     var body: some View {
         Button(action: { showingDetail = true }) {
             HStack(alignment: .top, spacing: 12) {
-                // Video thumbnail
+                // Video preview with gradient
                 if let video = video {
-                    AsyncImage(url: URL(string: video.metadata.thumbnailUrl)) { image in
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.2))
-                            .overlay(
-                                Image(systemName: "play.circle.fill")
-                                    .foregroundColor(.gray)
-                                    .font(.largeTitle)
-                            )
+                    ZStack {
+                        LinearGradient(
+                            gradient: Gradient(colors: [
+                                Color.blue.opacity(0.3), Color.purple.opacity(0.3),
+                            ]),
+                            startPoint: .topLeading,
+                            endPoint: .bottomTrailing
+                        )
+
+                        VStack(spacing: 4) {
+                            Text(video.title)
+                                .font(.caption)
+                                .fontWeight(.medium)
+                                .foregroundColor(.white)
+                                .lineLimit(2)
+                                .multilineTextAlignment(.center)
+                            Text(formatDuration(video.metadata.duration))
+                                .font(.caption2)
+                                .foregroundColor(.white)
+                                .monospacedDigit()
+                        }
+                        .padding(.horizontal, 8)
                     }
                     .frame(width: 120, height: 160)
                     .clipShape(RoundedRectangle(cornerRadius: 8))
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
-                    if let video = video {
-                        Text(video.title)
-                            .font(.title3)
-                            .fontWeight(.semibold)
-                            .foregroundColor(.primary)
-                    }
+                    Text(note.originalText)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                        .lineLimit(1)
 
                     Text(note.originalText)
-                        .font(.body)
-                        .lineLimit(4)
+                        .font(.subheadline)
                         .foregroundColor(.secondary)
+                        .lineLimit(3)
 
                     Text(formatDate(note.createdAt))
                         .font(.caption)
@@ -395,15 +425,20 @@ struct StudyNoteCard: View {
                 }
             }
             .padding()
-            .frame(maxWidth: .infinity, alignment: .leading)
             .background(Color(.systemBackground))
             .cornerRadius(12)
-            .shadow(radius: 2)
+            .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
         }
         .buttonStyle(PlainButtonStyle())
         .sheet(isPresented: $showingDetail) {
             NavigationView {
-                StudyNoteDetailView(note: note, video: video)
+                if let video = video {
+                    VideoStudyNotesView(video: video)
+                } else {
+                    Text(note.originalText)
+                        .padding()
+                        .navigationTitle("Study Note")
+                }
             }
         }
     }
@@ -413,6 +448,12 @@ struct StudyNoteCard: View {
         formatter.dateStyle = .medium
         formatter.timeStyle = .short
         return formatter.string(from: date)
+    }
+
+    private func formatDuration(_ duration: Int) -> String {
+        let minutes = duration / 60
+        let seconds = duration % 60
+        return String(format: "%d:%02d", minutes, seconds)
     }
 }
 
@@ -627,21 +668,23 @@ struct SavedVideosFullView: View {
                 TextField("Search videos", text: $searchText)
                     .textFieldStyle(RoundedBorderTextFieldStyle())
 
-                Menu {
-                    ForEach(SortOption.allCases, id: \.label) { option in
-                        Button(action: { sortOption = option }) {
-                            HStack {
-                                Text(option.label)
-                                if sortOption == option {
-                                    Image(systemName: "checkmark")
+                Menu(
+                    content: {
+                        ForEach(SortOption.allCases, id: \.label) { option in
+                            Button(action: { sortOption = option }) {
+                                HStack {
+                                    Text(option.label)
+                                    if sortOption == option {
+                                        Image(systemName: "checkmark")
+                                    }
                                 }
                             }
                         }
-                    }
-                } label: {
-                    Image(systemName: "arrow.up.arrow.down")
-                        .foregroundColor(.blue)
-                }
+                    },
+                    label: {
+                        Image(systemName: "arrow.up.arrow.down")
+                            .foregroundColor(.blue)
+                    })
 
                 Button(action: { showingFilterSheet = true }) {
                     Image(systemName: "line.3.horizontal.decrease.circle")
@@ -687,10 +730,10 @@ struct SavedVideosFullView: View {
                 }
                 .padding()
             }
-        }
-        .navigationTitle("Saved Videos")
-        .sheet(isPresented: $showingFilterSheet) {
-            FilterSheet(selectedSubject: $selectedSubject, subjects: subjects)
+            .navigationTitle("Saved Videos")
+            .sheet(isPresented: $showingFilterSheet) {
+                FilterSheet(selectedSubject: $selectedSubject, subjects: subjects)
+            }
         }
     }
 }

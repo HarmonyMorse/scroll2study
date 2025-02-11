@@ -140,6 +140,44 @@ class UserService {
                     "totalWatchTime": stats.totalWatchTime,
                     "completedVideos": stats.completedVideos,
                     "lastLoginAt": Timestamp(date: stats.lastLoginAt),
+                    "studyStreak": stats.studyStreak,
+                    "lastStudyDate": stats.lastStudyDate.map { Timestamp(date: $0) }
+                ],
+                "updatedAt": Timestamp(date: Date()),
+            ])
+    }
+
+    func updateAchievements(userId: String, achievements: User.Achievements) async throws {
+        try await db.collection("users")
+            .document(userId)
+            .updateData([
+                "achievements": [
+                    "videoMilestones": Array(achievements.videos.unlockedMilestones),
+                    "completedSubjects": achievements.subjects.completedSubjects,
+                    "subjectMilestones": Array(achievements.subjects.unlockedMilestones),
+                    "longestStreak": achievements.streaks.longestStreak,
+                    "streakMilestones": Array(achievements.streaks.unlockedMilestones),
+                    "longestSession": achievements.time.longestSession,
+                    "timeMilestones": Array(achievements.time.unlockedMilestones),
+                    "social": [
+                        "createdCollections": achievements.social.createdCollections,
+                        "createdNotes": achievements.social.createdNotes,
+                        "sharedResources": achievements.social.sharedResources,
+                        "joinedGroups": achievements.social.joinedGroups,
+                        "helpedStudents": achievements.social.helpedStudents,
+                        "milestones": Array(achievements.social.unlockedMilestones)
+                    ],
+                    "special": [
+                        "earlyBirdSessions": achievements.special.earlyBirdSessions,
+                        "nightOwlSessions": achievements.special.nightOwlSessions,
+                        "weekendStudySessions": achievements.special.weekendStudySessions,
+                        "multiSubjectDays": achievements.special.multiSubjectDays,
+                        "perfectWeeks": achievements.special.perfectWeeks,
+                        "speedLearning": achievements.special.speedLearning,
+                        "diverseLearning": achievements.special.diverseLearning,
+                        "focusSessions": achievements.special.focusSessions,
+                        "milestones": Array(achievements.special.unlockedMilestones)
+                    ]
                 ],
                 "updatedAt": Timestamp(date: Date()),
             ])

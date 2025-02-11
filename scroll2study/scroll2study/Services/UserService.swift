@@ -27,12 +27,39 @@ class UserService {
             stats: User.Stats(
                 totalWatchTime: 0,
                 completedVideos: 0,
-                lastLoginAt: now
+                lastLoginAt: now,
+                studyStreak: 0,
+                lastStudyDate: nil
             ),
             settings: User.Settings(
                 notifications: true,
                 autoplay: true,
                 preferredLanguage: "en"
+            ),
+            achievements: User.Achievements(
+                videos: .init(completedVideos: 0, unlockedMilestones: []),
+                subjects: .init(completedSubjects: 0, unlockedMilestones: []),
+                streaks: .init(longestStreak: 0, currentStreak: 0, unlockedMilestones: []),
+                time: .init(totalStudyMinutes: 0, longestSession: 0, unlockedMilestones: []),
+                social: .init(
+                    createdCollections: 0,
+                    createdNotes: 0,
+                    sharedResources: 0,
+                    joinedGroups: 0,
+                    helpedStudents: 0,
+                    unlockedMilestones: []
+                ),
+                special: .init(
+                    earlyBirdSessions: 0,
+                    nightOwlSessions: 0,
+                    weekendStudySessions: 0,
+                    multiSubjectDays: 0,
+                    perfectWeeks: 0,
+                    speedLearning: 0,
+                    diverseLearning: 0,
+                    focusSessions: 0,
+                    unlockedMilestones: []
+                )
             ),
             createdAt: now,
             updatedAt: now

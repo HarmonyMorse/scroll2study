@@ -201,18 +201,34 @@ enum VideoStatType: Int {
 enum TimeStatType: Int {
     case minutes = 0
     case hours = 1
-    case streak = 2
 
     var title: String {
         switch self {
         case .minutes: return "Minutes Watched"
         case .hours: return "Hours Watched"
-        case .streak: return "Day Streak"
         }
     }
 
     mutating func cycle() {
-        self = TimeStatType(rawValue: (rawValue + 1) % 3) ?? .minutes
+        self = TimeStatType(rawValue: (rawValue + 1) % 2) ?? .minutes
+    }
+}
+
+enum VideoTimeStatType: Int {
+    case average = 0
+    case shortest = 1
+    case longest = 2
+
+    var title: String {
+        switch self {
+        case .average: return "Average Time/Video"
+        case .shortest: return "Shortest Video"
+        case .longest: return "Longest Video"
+        }
+    }
+
+    mutating func cycle() {
+        self = VideoTimeStatType(rawValue: (rawValue + 1) % 3) ?? .average
     }
 }
 
@@ -290,6 +306,7 @@ struct ProgressOverview: View {
     @State private var subjectStatType: SubjectStatType = .total
     @State private var videoStatType: VideoStatType = .total
     @State private var timeStatType: TimeStatType = .minutes
+    @State private var videoTimeStatType: VideoTimeStatType = .average
     @State private var subjectFilter: SubjectFilter = .all
 
     private var exploredSubjects: [Subject] {
@@ -332,7 +349,6 @@ struct ProgressOverview: View {
 
     private var timeStats: (title: String, value: String, progress: Double) {
         let totalMinutes = viewModel.completedVideos.reduce(0) { $0 + ($1.metadata.duration / 60) }
-        let maxStreak = 30  // Maximum streak to show in progress bar
 
         switch timeStatType {
         case .minutes:
@@ -340,11 +356,48 @@ struct ProgressOverview: View {
         case .hours:
             let hours = totalMinutes / 60
             return ("Hours Watched", "\(hours)", min(Double(hours) / 50.0, 1.0))
-        case .streak:
+        }
+    }
+
+    private var videoTimeStats: (title: String, value: String, progress: Double) {
+        let videos = viewModel.completedVideos
+        let totalVideos = videos.count
+
+        if totalVideos == 0 {
+            return (VideoTimeStatType.average.title, "0 min", 0.0)
+        }
+
+        switch videoTimeStatType {
+        case .average:
+            let totalMinutes = videos.reduce(0) { $0 + ($1.metadata.duration / 60) }
+            let averageMinutes = totalMinutes / totalVideos
             return (
-                "Day Streak", "\(viewModel.studyStreak)",
-                min(Double(viewModel.studyStreak) / Double(maxStreak), 1.0)
+                VideoTimeStatType.average.title,
+                "\(averageMinutes) min",
+                min(Double(averageMinutes) / 30.0, 1.0)
             )
+
+        case .shortest:
+            if let shortestDuration = videos.map({ $0.metadata.duration }).min() {
+                let minutes = shortestDuration / 60
+                return (
+                    VideoTimeStatType.shortest.title,
+                    "\(minutes) min",
+                    min(Double(minutes) / 30.0, 1.0)
+                )
+            }
+            return (VideoTimeStatType.shortest.title, "0 min", 0.0)
+
+        case .longest:
+            if let longestDuration = videos.map({ $0.metadata.duration }).max() {
+                let minutes = longestDuration / 60
+                return (
+                    VideoTimeStatType.longest.title,
+                    "\(minutes) min",
+                    min(Double(minutes) / 30.0, 1.0)
+                )
+            }
+            return (VideoTimeStatType.longest.title, "0 min", 0.0)
         }
     }
 
@@ -437,13 +490,20 @@ struct ProgressOverview: View {
                         }
                         .buttonStyle(PlainButtonStyle())
 
-                        StatCard(
-                            title: "Average Time/Video",
-                            value: "12 min",
-                            icon: "timer",
-                            color: .purple,
-                            progress: 0.6
-                        )
+                        Button(action: {
+                            withAnimation {
+                                videoTimeStatType.cycle()
+                            }
+                        }) {
+                            StatCard(
+                                title: videoTimeStats.title,
+                                value: videoTimeStats.value,
+                                icon: "timer",
+                                color: .purple,
+                                progress: videoTimeStats.progress
+                            )
+                        }
+                        .buttonStyle(PlainButtonStyle())
 
                         // Third Row - Achievement Stats
                         StatCard(

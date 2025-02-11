@@ -11,17 +11,7 @@ struct CollectionCard: View {
     var body: some View {
         VStack(alignment: .leading) {
             ZStack {
-                if !collection.thumbnailUrl.isEmpty {
-                    AsyncImage(url: URL(string: collection.thumbnailUrl)) { image in
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        gradientBackground
-                    }
-                } else {
-                    gradientBackground
-                }
+                gradientBackground
 
                 VStack(spacing: 4) {
                     Image(systemName: "folder.fill")

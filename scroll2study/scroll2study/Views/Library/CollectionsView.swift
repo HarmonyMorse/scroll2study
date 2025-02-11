@@ -2,6 +2,8 @@
 import FirebaseAuth
 import FirebaseFirestore
 import SwiftUI
+// Import our custom components
+@_spi(Components) import scroll2study
 
 struct CollectionsView: View {
     @ObservedObject var viewModel: LibraryViewModel
@@ -70,7 +72,7 @@ struct CollectionsView: View {
                             }
 
                             // Collection Info
-                            VStack(alignment: .leading, spacing: 4) {
+                            VStack(alignment: .leading) {
                                 Text(collection.name)
                                     .font(.headline)
                                 let videos = viewModel.getVideosForCollection(collection)
@@ -92,16 +94,14 @@ struct CollectionsView: View {
         }
         .navigationTitle("My Collections")
         .toolbar {
-            if !viewModel.collections.isEmpty {
-                ToolbarItem(placement: .primaryAction) {
-                    Button(action: { showingNewCollectionSheet = true }) {
-                        Image(systemName: "folder.badge.plus")
-                    }
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: { showingNewCollectionSheet = true }) {
+                    Image(systemName: "folder.badge.plus")
                 }
             }
         }
         .sheet(isPresented: $showingNewCollectionSheet) {
-            NewCollectionSheet(viewModel: viewModel)
+            NewCollectionOptionsSheet(viewModel: viewModel)
         }
     }
 }

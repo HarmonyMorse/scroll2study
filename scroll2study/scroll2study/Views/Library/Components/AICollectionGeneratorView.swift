@@ -69,12 +69,10 @@ struct AICollectionGeneratorView: View {
                 // Create a prompt for GPT to analyze the videos and create a collection
                 let systemPrompt = """
                     You are an educational content curator. Given a user's learning goal and a list of available educational videos, 
-                    select the most relevant videos that would help them achieve their goal. Format your response as a JSON object with:
-                    {
-                        "name": "Collection name",
-                        "description": "Collection description",
-                        "videoIds": ["id1", "id2", ...]
-                    }
+                    select the most relevant videos that would help them achieve their goal. 
+                    Return ONLY a raw JSON object without any markdown formatting or code blocks. The response must be exactly in this format:
+                    {"name":"Collection name","description":"Collection description","videoIds":["id1","id2"]}
+                    Do not include any other text, explanation, or formatting in your response.
                     """
 
                 let videosContext = allVideos.map { video in

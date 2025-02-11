@@ -17,7 +17,7 @@ class LibraryViewModel: ObservableObject {
     @Published var error: Error?
 
     private let userService = UserService.shared
-    private let gridService = GridService()
+    let gridService = GridService()
     private let studyNoteService = StudyNoteService.shared
     private var savedVideosManager: SavedVideosManager?
     private var collectionsManager: CollectionsManager?
@@ -27,6 +27,9 @@ class LibraryViewModel: ObservableObject {
     init() {
         setupManagers()
         loadStudyNotes()
+        Task {
+            await gridService.fetchGridData()
+        }
     }
 
     deinit {

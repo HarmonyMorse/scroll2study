@@ -10,11 +10,11 @@ class AchievementService {
     private init() {}
     
     // MARK: - Achievement Milestones
-    private let videoMilestones = [1, 10, 25, 50, 100, 200, 500]
-    private let subjectMilestones = [1, 5, 10, 25, 50, 100]
-    private let streakMilestones = [3, 7, 14, 30, 60, 100, 365]
-    private let timeMilestones = [60, 180, 300, 480, 720] // in minutes
-    private let socialMilestones = [5, 10, 25, 50, 100]
+    let videoMilestones = [1, 10, 25, 50, 100, 200, 500]
+    let subjectMilestones = [1, 5, 10, 25, 50, 100]
+    let streakMilestones = [3, 7, 14, 30, 60, 100, 365]
+    let timeMilestones = [60, 180, 300, 480, 720] // in minutes
+    let socialMilestones = [5, 10, 25, 50, 100]
     
     // MARK: - Special Achievement Tracking
     

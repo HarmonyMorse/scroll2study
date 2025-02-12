@@ -88,6 +88,7 @@ class UserService {
             profile: user.profile,
             stats: user.stats,
             settings: user.settings,
+            achievements: user.achievements,
             createdAt: user.createdAt,
             updatedAt: Date()
         )

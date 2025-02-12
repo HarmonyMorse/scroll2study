@@ -17,25 +17,29 @@ struct LibraryView: View {
         ScrollView {
             VStack(spacing: 24) {
                 // Saved Videos Section
-                if !viewModel.savedVideos.isEmpty {
-                    NavigationLink(
-                        destination: SavedVideosFullView(
-                            videos: viewModel.savedVideos, viewModel: viewModel)
-                    ) {
-                        HStack {
-                            Label("Saved Videos", systemImage: "bookmark.fill")
-                                .font(.headline)
-                            Spacer()
-                            Text("\(viewModel.savedVideos.count)")
-                                .foregroundColor(.gray)
-                            Image(systemName: "chevron.right")
-                                .foregroundColor(.gray)
-                        }
-                        .padding(.horizontal)
-                        .padding(.vertical, 12)
+                NavigationLink(
+                    destination: SavedVideosFullView(
+                        videos: viewModel.savedVideos, viewModel: viewModel)
+                ) {
+                    HStack {
+                        Label("Saved Videos", systemImage: "bookmark.fill")
+                            .font(.headline)
+                        Spacer()
+                        Text("\(viewModel.savedVideos.count)")
+                            .foregroundColor(.gray)
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.gray)
                     }
-                    .buttonStyle(PlainButtonStyle())
+                    .padding(.horizontal)
+                    .padding(.vertical, 12)
+                }
+                .buttonStyle(PlainButtonStyle())
 
+                if viewModel.savedVideos.isEmpty {
+                    Text("No saved videos yet")
+                        .foregroundColor(.gray)
+                        .padding(.horizontal)
+                } else {
                     ScrollView(.horizontal, showsIndicators: false) {
                         LazyHStack(spacing: 16) {
                             ForEach(viewModel.savedVideos) { video in
@@ -47,25 +51,29 @@ struct LibraryView: View {
                 }
 
                 // Completed Videos Section
-                if !viewModel.completedVideos.isEmpty {
-                    NavigationLink(
-                        destination: CompletedVideosFullView(
-                            videos: viewModel.completedVideos, viewModel: viewModel)
-                    ) {
-                        HStack {
-                            Label("Completed Videos", systemImage: "checkmark.circle.fill")
-                                .font(.headline)
-                            Spacer()
-                            Text("\(viewModel.completedVideos.count)")
-                                .foregroundColor(.gray)
-                            Image(systemName: "chevron.right")
-                                .foregroundColor(.gray)
-                        }
-                        .padding(.horizontal)
-                        .padding(.vertical, 12)
+                NavigationLink(
+                    destination: CompletedVideosFullView(
+                        videos: viewModel.completedVideos, viewModel: viewModel)
+                ) {
+                    HStack {
+                        Label("Completed Videos", systemImage: "checkmark.circle.fill")
+                            .font(.headline)
+                        Spacer()
+                        Text("\(viewModel.completedVideos.count)")
+                            .foregroundColor(.gray)
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.gray)
                     }
-                    .buttonStyle(PlainButtonStyle())
+                    .padding(.horizontal)
+                    .padding(.vertical, 12)
+                }
+                .buttonStyle(PlainButtonStyle())
 
+                if viewModel.completedVideos.isEmpty {
+                    Text("No completed videos yet")
+                        .foregroundColor(.gray)
+                        .padding(.horizontal)
+                } else {
                     ScrollView(.horizontal, showsIndicators: false) {
                         LazyHStack(spacing: 16) {
                             ForEach(viewModel.completedVideos) { video in
@@ -77,25 +85,29 @@ struct LibraryView: View {
                 }
 
                 // Collections Section
-                if !viewModel.collections.isEmpty {
-                    NavigationLink(
-                        destination: CollectionsFullView(
-                            collections: viewModel.collections, viewModel: viewModel)
-                    ) {
-                        HStack {
-                            Label("Collections", systemImage: "folder.fill")
-                                .font(.headline)
-                            Spacer()
-                            Text("\(viewModel.collections.count)")
-                                .foregroundColor(.gray)
-                            Image(systemName: "chevron.right")
-                                .foregroundColor(.gray)
-                        }
-                        .padding(.horizontal)
-                        .padding(.vertical, 12)
+                NavigationLink(
+                    destination: CollectionsFullView(
+                        collections: viewModel.collections, viewModel: viewModel)
+                ) {
+                    HStack {
+                        Label("Collections", systemImage: "folder.fill")
+                            .font(.headline)
+                        Spacer()
+                        Text("\(viewModel.collections.count)")
+                            .foregroundColor(.gray)
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.gray)
                     }
-                    .buttonStyle(PlainButtonStyle())
+                    .padding(.horizontal)
+                    .padding(.vertical, 12)
+                }
+                .buttonStyle(PlainButtonStyle())
 
+                if viewModel.collections.isEmpty {
+                    Text("No collections created yet")
+                        .foregroundColor(.gray)
+                        .padding(.horizontal)
+                } else {
                     ScrollView(.horizontal, showsIndicators: false) {
                         LazyHStack(spacing: 16) {
                             ForEach(viewModel.collections) { collection in
@@ -107,25 +119,29 @@ struct LibraryView: View {
                 }
 
                 // Study Notes Section
-                if !viewModel.studyNotes.isEmpty {
-                    NavigationLink(
-                        destination: StudyNotesFullView(
-                            notes: viewModel.studyNotes, viewModel: viewModel)
-                    ) {
-                        HStack {
-                            Label("Study Notes", systemImage: "note.text")
-                                .font(.headline)
-                            Spacer()
-                            Text("\(viewModel.studyNotes.count)")
-                                .foregroundColor(.gray)
-                            Image(systemName: "chevron.right")
-                                .foregroundColor(.gray)
-                        }
-                        .padding(.horizontal)
-                        .padding(.vertical, 12)
+                NavigationLink(
+                    destination: StudyNotesFullView(
+                        notes: viewModel.studyNotes, viewModel: viewModel)
+                ) {
+                    HStack {
+                        Label("Study Notes", systemImage: "note.text")
+                            .font(.headline)
+                        Spacer()
+                        Text("\(viewModel.studyNotes.count)")
+                            .foregroundColor(.gray)
+                        Image(systemName: "chevron.right")
+                            .foregroundColor(.gray)
                     }
-                    .buttonStyle(PlainButtonStyle())
+                    .padding(.horizontal)
+                    .padding(.vertical, 12)
+                }
+                .buttonStyle(PlainButtonStyle())
 
+                if viewModel.studyNotes.isEmpty {
+                    Text("No study notes yet")
+                        .foregroundColor(.gray)
+                        .padding(.horizontal)
+                } else {
                     ScrollView(.horizontal, showsIndicators: false) {
                         LazyHStack(spacing: 16) {
                             ForEach(viewModel.studyNotes) { note in

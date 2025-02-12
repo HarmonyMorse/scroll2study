@@ -247,8 +247,8 @@ struct VideoPlayerView: View {
                     Task { @MainActor in
                         self.duration = duration
                         if !self.hasBeenWatched {
-                            self.celebrationMessage =
-                                self.messages.randomElement() ?? "Great job! 🎉"
+                            player.pause() // Pause the video
+                            self.celebrationMessage = self.messages.randomElement() ?? "Great job! 🎉"
                             withAnimation {
                                 self.showCelebration = true
                             }
@@ -568,11 +568,18 @@ struct CelebrationView: View {
         GeometryReader { geometry in
             Color.green
                 .overlay(
-                    Text(message)
-                        .font(.system(size: 32, weight: .bold))
-                        .foregroundColor(.white)
-                        .multilineTextAlignment(.center)
-                        .padding()
+                    VStack {
+                        Text(message)
+                            .font(.system(size: 32, weight: .bold))
+                            .foregroundColor(.white)
+                            .multilineTextAlignment(.center)
+                            .padding()
+                        
+                        Text("Tap to dismiss")
+                            .font(.system(size: 18))
+                            .foregroundColor(.white.opacity(0.8))
+                            .padding(.top, 8)
+                    }
                 )
                 .edgesIgnoringSafeArea(.all)
                 .onTapGesture {

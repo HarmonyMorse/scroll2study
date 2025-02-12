@@ -107,13 +107,15 @@ struct VideoPlayerView: View {
             togglePlayback()
         }
         .onChange(of: isCurrent) { newIsCurrent in
-            if !newIsCurrent && isPlaying {
+            if !newIsCurrent {
+                player?.pause()  // Always pause when not current
                 playbackManager.stopCurrentPlayback()
                 cleanupPlayer()  // Stop and cleanup when swiped away
             }
         }
         .onDisappear {
             print("DEBUG: VideoPlayerView disappeared")
+            player?.pause()  // Ensure video is paused when view disappears
             cleanupPlayer()
         }
     }

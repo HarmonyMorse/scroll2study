@@ -2,6 +2,8 @@
 import FirebaseAuth
 import FirebaseFirestore
 import SwiftUI
+// Import our custom components
+@_spi(Components) import scroll2study
 
 struct CollectionsView: View {
     @ObservedObject var viewModel: LibraryViewModel
@@ -70,7 +72,7 @@ struct CollectionsView: View {
                             }
 
                             // Collection Info
-                            VStack(alignment: .leading, spacing: 4) {
+                            VStack(alignment: .leading) {
                                 Text(collection.name)
                                     .font(.headline)
                                 let videos = viewModel.getVideosForCollection(collection)
@@ -92,16 +94,14 @@ struct CollectionsView: View {
         }
         .navigationTitle("My Collections")
         .toolbar {
-            if !viewModel.collections.isEmpty {
-                ToolbarItem(placement: .primaryAction) {
-                    Button(action: { showingNewCollectionSheet = true }) {
-                        Image(systemName: "folder.badge.plus")
-                    }
+            ToolbarItem(placement: .primaryAction) {
+                Button(action: { showingNewCollectionSheet = true }) {
+                    Image(systemName: "folder.badge.plus")
                 }
             }
         }
         .sheet(isPresented: $showingNewCollectionSheet) {
-            NewCollectionSheet(viewModel: viewModel)
+            NewCollectionOptionsSheet(viewModel: viewModel)
         }
     }
 }
@@ -111,9 +111,12 @@ struct CollectionDetailView: View {
     let collection: Collection
     @State private var showingDeleteAlert = false
     @Environment(\.dismiss) var dismiss
+    @EnvironmentObject private var videoSelection: VideoSelectionState
+    @State private var hideCompleted = false
 
     var body: some View {
         let videos = viewModel.getVideosForCollection(collection)
+        let filteredVideos = hideCompleted ? videos.filter { !viewModel.isVideoCompleted($0.id) } : videos
 
         List {
             Section {
@@ -124,28 +127,64 @@ struct CollectionDetailView: View {
             }
 
             Section {
-                ForEach(videos) { video in
-                    HStack {
-                        AsyncImage(url: URL(string: video.metadata.thumbnailUrl)) { image in
-                            image
-                                .resizable()
-                                .aspectRatio(contentMode: .fill)
-                        } placeholder: {
-                            Rectangle()
-                                .fill(Color.gray.opacity(0.2))
-                        }
-                        .frame(width: 80, height: 45)
-                        .clipShape(RoundedRectangle(cornerRadius: 4))
+                Toggle("Hide Completed Videos", isOn: $hideCompleted)
+                    .padding(.vertical, 4)
+            }
 
-                        VStack(alignment: .leading) {
-                            Text(video.title)
-                                .font(.headline)
-                            Text(video.subject)
-                                .font(.caption)
-                                .foregroundColor(.secondary)
+            Section {
+                ForEach(filteredVideos) { video in
+                    Button(action: {
+                        videoSelection.selectedVideo = video
+                        videoSelection.shouldNavigateToVideo = true
+                    }) {
+                        HStack {
+                            // Gradient thumbnail with timestamp and level
+                            ZStack {
+                                LinearGradient(
+                                    gradient: Gradient(colors: [
+                                        Color.blue.opacity(0.3), Color.purple.opacity(0.3),
+                                    ]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+
+                                VStack(spacing: 2) {
+                                    Text("Level \(video.complexityLevel)")
+                                        .font(.caption2)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.white)
+                                    Text(formatDuration(video.metadata.duration))
+                                        .font(.caption2)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.white)
+                                        .monospacedDigit()
+                                }
+                            }
+                            .frame(width: 80, height: 45)
+                            .clipShape(RoundedRectangle(cornerRadius: 4))
+                            .overlay(
+                                Group {
+                                    if viewModel.isVideoCompleted(video.id) {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundColor(.green)
+                                            .font(.system(size: 16))
+                                            .padding(4)
+                                    }
+                                },
+                                alignment: .topTrailing
+                            )
+
+                            VStack(alignment: .leading) {
+                                Text(video.title)
+                                    .font(.headline)
+                                Text(video.subject)
+                                    .font(.caption)
+                                    .foregroundColor(.secondary)
+                            }
+                            .padding(.leading, 8)
                         }
-                        .padding(.leading, 8)
                     }
+                    .buttonStyle(PlainButtonStyle())
                     .swipeActions(edge: .trailing) {
                         Button(role: .destructive) {
                             Task {
@@ -158,7 +197,7 @@ struct CollectionDetailView: View {
                     }
                 }
             } header: {
-                Text("Videos")
+                Text("Videos (\(filteredVideos.count))")
             }
         }
         .navigationTitle(collection.name)
@@ -182,5 +221,11 @@ struct CollectionDetailView: View {
         } message: {
             Text("Are you sure you want to delete this collection? This action cannot be undone.")
         }
+    }
+
+    private func formatDuration(_ duration: Int) -> String {
+        let minutes = duration / 60
+        let seconds = duration % 60
+        return String(format: "%d:%02d", minutes, seconds)
     }
 }

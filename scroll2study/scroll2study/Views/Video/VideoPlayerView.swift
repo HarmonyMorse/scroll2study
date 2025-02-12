@@ -20,7 +20,18 @@ struct VideoPlayerView: View {
     @State private var timeObserver: Any?
     @State private var showProgressBar = false
     @State private var hasBeenWatched = false  // Track if video has been watched
+    @State private var showStudyNotes = false
+    @State private var showCelebration = false  // New state for celebration popup
+    @State private var celebrationMessage: String = ""  // Store the selected message
     private let availableSpeeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
+    private let messages = [
+        "Great job! 🎉",
+        "You're crushing it! 💪",
+        "Knowledge gained! 🧠",
+        "Keep up the momentum! 🚀",
+        "Learning champion! 🏆",
+        "You're on fire! 🔥",
+    ]
 
     private func checkWatchStatus() {
         guard let userId = Auth.auth().currentUser?.uid else { return }
@@ -52,201 +63,17 @@ struct VideoPlayerView: View {
             if let player = player {
                 CustomVideoPlayer(player: player)
                     .onAppear {
-                        // Configure video player settings
                         player.play()
-                        setupTimeObserver()  // Add time observer to track progress
-                        checkWatchStatus()  // Check if video has been watched before
+                        setupTimeObserver()
+                        checkWatchStatus()
                     }
                     .onDisappear {
                         removeTimeObserver()
                         playbackManager.stopCurrentPlayback()
                     }
-                    .overlay(
-                        Group {
-                            if playbackManager.isBuffering && isPlaying {
-                                ZStack {
-                                    Color.black.opacity(0.3)
-                                    ProgressView()
-                                        .scaleEffect(1.5)
-                                }
-                            }
-                        }
-                    )
-                    .overlay(
-                        HStack(alignment: .bottom) {
-                            // Left side vertical button stack
-                            VStack(spacing: 20) {
-                                Spacer()
-
-                                // Progress bar toggle button
-                                Button(action: { showProgressBar.toggle() }) {
-                                    VStack(spacing: 4) {
-                                        Image(
-                                            systemName: showProgressBar ? "timer" : "timer.circle"
-                                        )
-                                        .font(.system(size: 28))
-                                        .foregroundColor(.white)
-                                        .frame(width: 44, height: 44)
-                                        .background(Color.black.opacity(0.4))
-                                        .clipShape(Circle())
-
-                                        Text(showProgressBar ? "Hide" : "Time")
-                                            .font(.caption2)
-                                            .foregroundColor(.white)
-                                    }
-                                }
-                                .overlay(alignment: .trailing) {
-                                    if showProgressBar {
-                                        // Progress popup
-                                        HStack(spacing: 16) {
-                                            // Progress bar
-                                            GeometryReader { geometry in
-                                                ZStack(alignment: .leading) {
-                                                    // Background track
-                                                    Capsule()
-                                                        .fill(Color.white.opacity(0.3))
-                                                        .frame(height: 3)
-                                                        .frame(
-                                                            maxHeight: .infinity, alignment: .center
-                                                        )
-
-                                                    // Progress track
-                                                    Capsule()
-                                                        .fill(Color.white)
-                                                        .opacity(hasBeenWatched ? 1.0 : 0.3)
-                                                        .frame(
-                                                            width: geometry.size.width * progress,
-                                                            height: 3
-                                                        )
-                                                        .frame(
-                                                            maxHeight: .infinity, alignment: .center
-                                                        )
-
-                                                    // Drag handle
-                                                    Circle()
-                                                        .fill(Color.white)
-                                                        .opacity(hasBeenWatched ? 1.0 : 0.3)
-                                                        .frame(width: 12, height: 12)
-                                                        .shadow(
-                                                            color: .black.opacity(0.3), radius: 2
-                                                        )
-                                                        .position(
-                                                            x: max(
-                                                                6,
-                                                                min(
-                                                                    geometry.size.width * progress,
-                                                                    geometry.size.width - 6)),
-                                                            y: geometry.size.height / 2)
-                                                }
-                                                .frame(height: 24)
-                                                .gesture(
-                                                    DragGesture(minimumDistance: 0)
-                                                        .onChanged { value in
-                                                            guard hasBeenWatched else { return }  // Prevent seeking if not watched
-                                                            if duration > 0 {
-                                                                let percentage =
-                                                                    value.location.x
-                                                                    / geometry.size.width
-                                                                let time =
-                                                                    duration
-                                                                    * Double(
-                                                                        max(0, min(1, percentage)))
-                                                                player.seek(
-                                                                    to: CMTime(
-                                                                        seconds: time,
-                                                                        preferredTimescale: 600))
-                                                            }
-                                                        }
-                                                )
-                                            }
-                                            .frame(width: 140, height: 24)
-
-                                            // Time display
-                                            Text(
-                                                "\(formatTime(currentTime)) / \(formatTime(duration))"
-                                            )
-                                            .font(.system(size: 12, weight: .medium))
-                                            .foregroundColor(.white)
-                                            .monospacedDigit()
-                                        }
-                                        .padding(.horizontal, 12)
-                                        .padding(.vertical, 8)
-                                        .background(
-                                            RoundedRectangle(cornerRadius: 16)
-                                                .fill(Color.black.opacity(0.85))
-                                                .shadow(
-                                                    color: .black.opacity(0.2), radius: 8, x: 0,
-                                                    y: 4)
-                                        )
-                                        .offset(x: 180, y: 0)
-                                        .transition(.opacity.combined(with: .scale(scale: 0.95)))
-                                    }
-                                }
-
-                                // Save button
-                                Button(action: { toggleSaveVideo() }) {
-                                    VStack(spacing: 4) {
-                                        Image(
-                                            systemName: savedVideosManager.isVideoSaved(video.id)
-                                                ? "bookmark.fill" : "bookmark"
-                                        )
-                                        .font(.system(size: 28))
-                                        .foregroundColor(.white)
-                                        .frame(width: 44, height: 44)
-                                        .background(Color.black.opacity(0.4))
-                                        .clipShape(Circle())
-
-                                        Text(
-                                            savedVideosManager.isVideoSaved(video.id)
-                                                ? "Saved" : "Save"
-                                        )
-                                        .font(.caption2)
-                                        .foregroundColor(.white)
-                                    }
-                                }
-
-                                // Speed button
-                                Button(action: { showSpeedPicker.toggle() }) {
-                                    VStack(spacing: 4) {
-                                        Image(systemName: "speedometer")
-                                            .font(.system(size: 28))
-                                            .foregroundColor(.white)
-                                            .frame(width: 44, height: 44)
-                                            .background(Color.black.opacity(0.4))
-                                            .clipShape(Circle())
-
-                                        Text("\(String(format: "%.1fx", player.rate))")
-                                            .font(.caption2)
-                                            .foregroundColor(.white)
-                                    }
-                                }
-                            }
-                            .padding(.leading, 16)
-                            .padding(.bottom, 80)  // Extra padding for tab bar
-
-                            Spacer()
-
-                            // Right side progress info
-                            VStack(alignment: .trailing) {
-                                Spacer()
-                                if showProgressBar {
-                                    Text("\(formatTime(currentTime)) / \(formatTime(duration))")
-                                        .font(.caption)
-                                        .foregroundColor(.white)
-                                        .padding(.trailing, 16)
-                                        .padding(.bottom, 80)
-                                }
-                            }
-                        }
-                    )
-                    .overlay(
-                        VStack(spacing: 0) {
-                            Spacer()  // Just keep this empty to remove the old progress bar
-                        }
-                    )
-                    .sheet(isPresented: $showSpeedPicker) {
-                        SpeedPickerView(player: player, speeds: availableSpeeds)
-                    }
+                    .overlay(bufferingOverlay)
+                    .overlay(celebrationOverlay)
+                    .overlay(controlsOverlay)
             } else if isLoading {
                 ProgressView()
                     .scaleEffect(1.5)
@@ -260,7 +87,8 @@ struct VideoPlayerView: View {
                 }
             } else {
                 VideoThumbnailView(
-                    thumbnailUrl: video.metadata.thumbnailUrl,
+                    title: video.title,
+                    duration: TimeInterval(video.metadata.duration),
                     onPlayTapped: {
                         Task {
                             await loadVideo()
@@ -279,13 +107,15 @@ struct VideoPlayerView: View {
             togglePlayback()
         }
         .onChange(of: isCurrent) { newIsCurrent in
-            if !newIsCurrent && isPlaying {
+            if !newIsCurrent {
+                player?.pause()  // Always pause when not current
                 playbackManager.stopCurrentPlayback()
                 cleanupPlayer()  // Stop and cleanup when swiped away
             }
         }
         .onDisappear {
             print("DEBUG: VideoPlayerView disappeared")
+            player?.pause()  // Ensure video is paused when view disappears
             cleanupPlayer()
         }
     }
@@ -418,6 +248,13 @@ struct VideoPlayerView: View {
                 if duration > 0 {
                     Task { @MainActor in
                         self.duration = duration
+                        if !self.hasBeenWatched {
+                            player.pause() // Pause the video
+                            self.celebrationMessage = self.messages.randomElement() ?? "Great job! 🎉"
+                            withAnimation {
+                                self.showCelebration = true
+                            }
+                        }
                         self.hasBeenWatched = true  // Mark as watched when video completes
                     }
                 }
@@ -472,7 +309,8 @@ struct VideoPlayerView: View {
                         videoURL: video.metadata.videoUrl,
                         savedAt: Date(),
                         duration: duration,
-                        subject: video.subject
+                        subject: video.subject,
+                        complexityLevel: video.complexityLevel
                     )
                     try await savedVideosManager.saveVideo(savedVideo)
                 }
@@ -491,6 +329,197 @@ struct VideoPlayerView: View {
         let minutes = totalSeconds / 60
         let seconds = totalSeconds % 60
         return String(format: "%d:%02d", minutes, seconds)
+    }
+
+    // MARK: - View Components
+
+    private var bufferingOverlay: some View {
+        Group {
+            if playbackManager.isBuffering && isPlaying {
+                ZStack {
+                    Color.black.opacity(0.3)
+                    ProgressView()
+                        .scaleEffect(1.5)
+                }
+            }
+        }
+    }
+
+    private var celebrationOverlay: some View {
+        Group {
+            if showCelebration {
+                CelebrationView(
+                    message: celebrationMessage,
+                    isPresented: $showCelebration
+                )
+                .transition(.opacity)
+            }
+        }
+    }
+
+    private var controlsOverlay: some View {
+        HStack(alignment: .bottom) {
+            controlButtonStack
+            Spacer()
+        }
+        .padding(.bottom, 20)
+        .padding(.leading, 16)
+    }
+
+    private var controlButtonStack: some View {
+        VStack(spacing: 20) {
+            Spacer()
+            progressButton
+            saveButton
+            studyNotesButton
+            speedButton
+            Spacer().frame(height: 20)
+        }
+    }
+
+    private var progressButton: some View {
+        Button(action: { showProgressBar.toggle() }) {
+            VStack(spacing: 4) {
+                Image(systemName: showProgressBar ? "timer" : "timer.circle")
+                    .font(.system(size: 28))
+                    .foregroundColor(.white)
+                    .frame(width: 44, height: 44)
+                    .background(Color.black.opacity(0.4))
+                    .clipShape(Circle())
+
+                Text(showProgressBar ? "Hide" : "Time")
+                    .font(.caption2)
+                    .foregroundColor(.white)
+            }
+        }
+        .overlay(alignment: .trailing) {
+            if showProgressBar {
+                progressBarOverlay
+            }
+        }
+    }
+
+    private var progressBarOverlay: some View {
+        HStack(spacing: 16) {
+            progressBarTrack
+            timeDisplay
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 16)
+                .fill(Color.black.opacity(0.85))
+                .shadow(color: .black.opacity(0.2), radius: 8, x: 0, y: 4)
+        )
+        .offset(x: 180, y: 0)
+        .transition(.opacity.combined(with: .scale(scale: 0.95)))
+    }
+
+    private var progressBarTrack: some View {
+        GeometryReader { geometry in
+            ZStack(alignment: .leading) {
+                Capsule()
+                    .fill(Color.white.opacity(0.3))
+                    .frame(height: 3)
+                    .frame(maxHeight: .infinity, alignment: .center)
+
+                Capsule()
+                    .fill(Color.white)
+                    .opacity(hasBeenWatched ? 1.0 : 0.3)
+                    .frame(width: geometry.size.width * progress, height: 3)
+                    .frame(maxHeight: .infinity, alignment: .center)
+
+                progressDragHandle(in: geometry)
+            }
+            .frame(height: 24)
+            .gesture(progressDragGesture(in: geometry))
+        }
+        .frame(width: 140, height: 24)
+    }
+
+    private func progressDragHandle(in geometry: GeometryProxy) -> some View {
+        Circle()
+            .fill(Color.white)
+            .opacity(hasBeenWatched ? 1.0 : 0.3)
+            .frame(width: 12, height: 12)
+            .shadow(color: .black.opacity(0.3), radius: 2)
+            .position(
+                x: max(6, min(geometry.size.width * progress, geometry.size.width - 6)),
+                y: geometry.size.height / 2
+            )
+    }
+
+    private func progressDragGesture(in geometry: GeometryProxy) -> some Gesture {
+        DragGesture(minimumDistance: 0)
+            .onChanged { value in
+                guard hasBeenWatched else { return }
+                if duration > 0 {
+                    let percentage = value.location.x / geometry.size.width
+                    let time = duration * Double(max(0, min(1, percentage)))
+                    player?.seek(to: CMTime(seconds: time, preferredTimescale: 600))
+                }
+            }
+    }
+
+    private var timeDisplay: some View {
+        Text("\(formatTime(currentTime)) / \(formatTime(duration))")
+            .font(.system(size: 12, weight: .medium))
+            .foregroundColor(.white)
+            .monospacedDigit()
+    }
+
+    private var saveButton: some View {
+        Button(action: { toggleSaveVideo() }) {
+            VStack(spacing: 4) {
+                Image(
+                    systemName: savedVideosManager.isVideoSaved(video.id)
+                        ? "bookmark.fill" : "bookmark"
+                )
+                .font(.system(size: 28))
+                .foregroundColor(.white)
+                .frame(width: 44, height: 44)
+                .background(Color.black.opacity(0.4))
+                .clipShape(Circle())
+
+                Text(savedVideosManager.isVideoSaved(video.id) ? "Saved" : "Save")
+                    .font(.caption2)
+                    .foregroundColor(.white)
+            }
+        }
+    }
+
+    private var studyNotesButton: some View {
+        Button(action: { showStudyNotes = true }) {
+            VStack(spacing: 4) {
+                Image(systemName: "note.text")
+                    .font(.system(size: 28))
+                    .foregroundColor(.white)
+                    .frame(width: 44, height: 44)
+                    .background(Color.black.opacity(0.4))
+                    .clipShape(Circle())
+
+                Text("Notes")
+                    .font(.caption2)
+                    .foregroundColor(.white)
+            }
+        }
+    }
+
+    private var speedButton: some View {
+        Button(action: { showSpeedPicker.toggle() }) {
+            VStack(spacing: 4) {
+                Image(systemName: "speedometer")
+                    .font(.system(size: 28))
+                    .foregroundColor(.white)
+                    .frame(width: 44, height: 44)
+                    .background(Color.black.opacity(0.4))
+                    .clipShape(Circle())
+
+                Text("Speed")
+                    .font(.caption2)
+                    .foregroundColor(.white)
+            }
+        }
     }
 }
 
@@ -530,6 +559,37 @@ struct SpeedPickerView: View {
             }
         }
         .presentationDetents([.medium])
+    }
+}
+
+struct CelebrationView: View {
+    let message: String
+    @Binding var isPresented: Bool
+
+    var body: some View {
+        GeometryReader { geometry in
+            Color.green
+                .overlay(
+                    VStack {
+                        Text(message)
+                            .font(.system(size: 32, weight: .bold))
+                            .foregroundColor(.white)
+                            .multilineTextAlignment(.center)
+                            .padding()
+                        
+                        Text("Tap to dismiss")
+                            .font(.system(size: 18))
+                            .foregroundColor(.white.opacity(0.8))
+                            .padding(.top, 8)
+                    }
+                )
+                .edgesIgnoringSafeArea(.all)
+                .onTapGesture {
+                    withAnimation {
+                        isPresented = false
+                    }
+                }
+        }
     }
 }
 

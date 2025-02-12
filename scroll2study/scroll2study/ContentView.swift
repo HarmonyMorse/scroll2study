@@ -69,16 +69,69 @@ struct CounterResponse: Codable {
     let personalCounter: Int
 }
 
+struct SplashScreenView: View {
+    var body: some View {
+        ZStack {
+            Color.white.edgesIgnoringSafeArea(.all)
+            Image("pexels-glasses")
+                .resizable()
+                .aspectRatio(contentMode: .fill)
+                .frame(width: UIScreen.main.bounds.width, height: UIScreen.main.bounds.height)
+                .clipped()
+                .edgesIgnoringSafeArea(.all)
+                .overlay(
+                    Color.black.opacity(0.3)
+                        .edgesIgnoringSafeArea(.all)
+                )
+            VStack {
+                Text("Scroll2Study")
+                    .font(.system(size: 42, weight: .bold))
+                    .foregroundColor(.white)
+                    .shadow(radius: 10)
+                Text("Learn at your own pace")
+                    .font(.system(size: 24, weight: .medium))
+                    .foregroundColor(.white)
+                    .shadow(radius: 5)
+            }
+        }
+    }
+}
+
 struct ContentView: View {
     @StateObject private var authManager = AuthenticationManager.shared
     @StateObject private var videoSelection = VideoSelectionState()
     @State private var selectedTab = 0
+    @State private var isShowingSplash = true
+    @State private var showingProgressMenu = false
+    @State private var selectedProgressView: ProgressViewType = .grid
+
+    private func handleTabSelection(_ tab: Int) {
+        if tab == 1 {  // Progress tab
+            showingProgressMenu = true
+        } else {
+            selectedTab = tab
+        }
+    }
 
     var body: some View {
         Group {
-            if authManager.isAuthenticated {
+            if isShowingSplash {
+                SplashScreenView()
+                    .onAppear {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            withAnimation(.easeOut(duration: 0.5)) {
+                                isShowingSplash = false
+                            }
+                        }
+                    }
+            } else if authManager.isAuthenticated {
                 ZStack(alignment: .bottom) {
-                    TabView(selection: $selectedTab) {
+                    TabView(
+                        selection: Binding(
+                            get: { selectedTab },
+                            set: { handleTabSelection($0) }
+                        )
+                    ) {
                         NavigationView {
                             GridView()
                         }
@@ -88,7 +141,7 @@ struct ContentView: View {
                         .tag(0)
 
                         NavigationView {
-                            ProgressView()
+                            VideoProgressView(selectedView: $selectedProgressView)
                         }
                         .tabItem {
                             Label("Progress", systemImage: "chart.line.uptrend.xyaxis")
@@ -125,6 +178,16 @@ struct ContentView: View {
                         tabBarAppearance.backgroundColor = .systemBackground
                         UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
                         UITabBar.appearance().standardAppearance = tabBarAppearance
+                    }
+                }
+                .sheet(isPresented: $showingProgressMenu) {
+                    ProgressMenuView(
+                        isPresented: $showingProgressMenu,
+                        selectedView: $selectedProgressView
+                    )
+                    .presentationDetents([.height(350)])
+                    .onDisappear {
+                        selectedTab = 1  // Switch to Progress tab after selection
                     }
                 }
             } else {

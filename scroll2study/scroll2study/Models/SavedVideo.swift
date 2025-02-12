@@ -9,18 +9,26 @@ struct SavedVideo: Identifiable, Codable {
     var savedAt: Date
     var duration: TimeInterval
     var subject: String
+    var complexityLevel: Int?  // Add optional complexity level
 
     // For Firestore
     var dictionary: [String: Any] {
-        return [
-            "id": id,
-            "title": title,
-            "thumbnailURL": thumbnailURL,
-            "videoURL": videoURL,
-            "savedAt": Timestamp(date: savedAt),
-            "duration": duration,
-            "subject": subject,
-        ]
+        var dict =
+            [
+                "id": id,
+                "title": title,
+                "thumbnailURL": thumbnailURL,
+                "videoURL": videoURL,
+                "savedAt": Timestamp(date: savedAt),
+                "duration": duration,
+                "subject": subject,
+            ] as [String: Any]
+
+        if let level = complexityLevel {
+            dict["complexityLevel"] = level
+        }
+
+        return dict
     }
 
     // Initialize from Firestore document
@@ -45,12 +53,13 @@ struct SavedVideo: Identifiable, Codable {
         self.savedAt = savedAtTimestamp.dateValue()
         self.duration = duration
         self.subject = subject
+        self.complexityLevel = data["complexityLevel"] as? Int
     }
 
     // Standard initializer
     init(
         id: String, title: String, thumbnailURL: String, videoURL: String, savedAt: Date,
-        duration: TimeInterval, subject: String
+        duration: TimeInterval, subject: String, complexityLevel: Int? = nil
     ) {
         self.id = id
         self.title = title
@@ -59,5 +68,6 @@ struct SavedVideo: Identifiable, Codable {
         self.savedAt = savedAt
         self.duration = duration
         self.subject = subject
+        self.complexityLevel = complexityLevel
     }
 }

@@ -44,32 +44,22 @@ struct CollectionsView: View {
                             viewModel: viewModel, collection: collection)
                     ) {
                         HStack(spacing: 16) {
-                            // Collection Thumbnail
-                            if !collection.thumbnailUrl.isEmpty {
-                                AsyncImage(url: URL(string: collection.thumbnailUrl)) { image in
-                                    image
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                } placeholder: {
-                                    Rectangle()
-                                        .fill(Color.gray.opacity(0.2))
-                                        .overlay(
-                                            Image(systemName: "folder.fill")
-                                                .foregroundColor(.gray)
-                                        )
-                                }
-                                .frame(width: 80, height: 60)
-                                .clipShape(RoundedRectangle(cornerRadius: 8))
-                            } else {
-                                Rectangle()
-                                    .fill(Color.gray.opacity(0.2))
-                                    .frame(width: 80, height: 60)
-                                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                                    .overlay(
-                                        Image(systemName: "folder.fill")
-                                            .foregroundColor(.gray)
-                                    )
-                            }
+                            // Collection Gradient Background
+                            LinearGradient(
+                                gradient: Gradient(colors: [
+                                    Color.blue.opacity(0.3),
+                                    Color.purple.opacity(0.3)
+                                ]),
+                                startPoint: .topLeading,
+                                endPoint: .bottomTrailing
+                            )
+                            .overlay(
+                                Image(systemName: "folder.fill")
+                                    .foregroundColor(.primary)
+                                    .font(.system(size: 24))
+                            )
+                            .frame(width: 80, height: 60)
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
 
                             // Collection Info
                             VStack(alignment: .leading) {

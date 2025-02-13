@@ -51,7 +51,7 @@ struct NewCollectionOptionsSheet: View {
                 NewCollectionSheet(viewModel: viewModel)
             }
             .sheet(isPresented: $showingAISheet) {
-                AICollectionGeneratorView(viewModel: viewModel)
+                AICollectionView(viewModel: viewModel)
             }
         }
     }

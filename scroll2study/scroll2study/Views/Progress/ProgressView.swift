@@ -511,7 +511,7 @@ struct ProgressOverview: View {
                         .buttonStyle(PlainButtonStyle())
 
                         // Third Row - Achievement Stats
-                        StatCard(
+                        /*StatCard(
                             title: "Achievements",
                             value: "3/10",
                             icon: "trophy.fill",
@@ -542,7 +542,7 @@ struct ProgressOverview: View {
                             icon: "checkmark.circle.fill",
                             color: .green,
                             progress: 0.85
-                        )
+                        )*/
 
                         // Fifth Row - Engagement Stats
                         StatCard(

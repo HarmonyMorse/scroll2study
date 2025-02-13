@@ -165,7 +165,12 @@ struct VideoStudyNotesView: View {
         Task {
             do {
                 // Call OpenAI API directly
-                let apiKey = ProcessInfo.processInfo.environment["OPENAI_API_KEY"] ?? ""
+                let apiKey = Configuration.openAIKey
+                if apiKey.isEmpty {
+                    throw NSError(
+                        domain: "", code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: "OpenAI API key not found in EnvVars.plist"])
+                }
                 let response = try await web.post(
                     "https://api.openai.com/v1/chat/completions",
                     headers: [

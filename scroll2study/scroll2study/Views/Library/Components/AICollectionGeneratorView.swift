@@ -60,8 +60,13 @@ struct AICollectionGeneratorView: View {
 
         Task {
             do {
-                let openAI = OpenAI(
-                    apiToken: ProcessInfo.processInfo.environment["OPENAI_API_KEY"] ?? "")
+                let apiKey = Configuration.openAIKey
+                if apiKey.isEmpty {
+                    throw NSError(
+                        domain: "", code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: "OpenAI API key not found in EnvVars.plist"])
+                }
+                let openAI = OpenAI(apiToken: apiKey)
 
                 // Get all available videos from the grid service
                 let allVideos = viewModel.gridService.videos

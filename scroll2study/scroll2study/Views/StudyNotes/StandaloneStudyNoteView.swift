@@ -11,30 +11,22 @@ private let logger = Logger(
 // Add a configuration struct to handle API keys
 struct Configuration {
     static var openAIKey: String {
-        // First try to get from environment
-        logger.debug("Checking environment variables for OPENAI_API_KEY")
-        if let key = ProcessInfo.processInfo.environment["OPENAI_API_KEY"] {
-            logger.debug("Found API key in environment variables")
-            return key
-        }
-
-        // Then try to get from a plist if exists
-        logger.debug("Checking Config.plist")
-        if let path = Bundle.main.path(forResource: "Config", ofType: "plist") {
-            logger.debug("Found Config.plist at path: \(path)")
+        logger.debug("Checking EnvVars.plist")
+        if let path = Bundle.main.path(forResource: "EnvVars", ofType: "plist") {
+            logger.debug("Found EnvVars.plist at path: \(path)")
             if let dict = NSDictionary(contentsOfFile: path) {
-                logger.debug("Loaded Config.plist dictionary")
+                logger.debug("Loaded EnvVars.plist dictionary")
                 if let key = dict["OPENAI_API_KEY"] as? String {
-                    logger.debug("Found API key in Config.plist")
+                    logger.debug("Found API key in EnvVars.plist")
                     return key
                 } else {
-                    logger.error("No OPENAI_API_KEY found in Config.plist")
+                    logger.error("No OPENAI_API_KEY found in EnvVars.plist")
                 }
             } else {
-                logger.error("Failed to load Config.plist as dictionary")
+                logger.error("Failed to load EnvVars.plist as dictionary")
             }
         } else {
-            logger.error("Config.plist not found in bundle")
+            logger.error("EnvVars.plist not found in bundle")
             // Print all resources in bundle for debugging
             if let resourcePath = Bundle.main.resourcePath {
                 let fileManager = FileManager.default
@@ -44,29 +36,7 @@ struct Configuration {
             }
         }
 
-        // Finally, return from .env file if exists
-        logger.debug("Checking .env file")
-        if let envPath = Bundle.main.path(forResource: ".env", ofType: nil) {
-            logger.debug("Found .env at path: \(envPath)")
-            if let contents = try? String(contentsOfFile: envPath, encoding: .utf8) {
-                logger.debug("Loaded .env contents")
-                let lines = contents.components(separatedBy: .newlines)
-                for line in lines {
-                    if line.hasPrefix("OPENAI_API_KEY=") {
-                        logger.debug("Found API key in .env file")
-                        let key = String(line.dropFirst("OPENAI_API_KEY=".count))
-                        return key
-                    }
-                }
-                logger.error("No OPENAI_API_KEY found in .env contents")
-            } else {
-                logger.error("Failed to read .env file contents")
-            }
-        } else {
-            logger.error(".env file not found in bundle")
-        }
-
-        logger.error("No API key found in any location")
+        logger.error("No API key found in EnvVars.plist")
         return ""
     }
 }

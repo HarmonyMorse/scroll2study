@@ -73,6 +73,7 @@ struct VideoPlayerView: View {
                     }
                     .overlay(bufferingOverlay)
                     .overlay(celebrationOverlay)
+                    .overlay(playPauseOverlay)
                     .overlay(controlsOverlay)
             } else if isLoading {
                 ProgressView()
@@ -357,6 +358,23 @@ struct VideoPlayerView: View {
         }
     }
 
+    private var playPauseOverlay: some View {
+        Group {
+            if !isPlaying {
+                ZStack {
+                    Circle()
+                        .fill(Color.black.opacity(0.6))
+                        .frame(width: 80, height: 80)
+                    
+                    Image(systemName: "play.fill")
+                        .font(.system(size: 40))
+                        .foregroundColor(.white)
+                }
+                .transition(.opacity)
+            }
+        }
+    }
+
     private var controlsOverlay: some View {
         HStack(alignment: .bottom) {
             controlButtonStack
@@ -503,6 +521,9 @@ struct VideoPlayerView: View {
                     .foregroundColor(.white)
             }
         }
+        .sheet(isPresented: $showStudyNotes) {
+            VideoStudyNotesView(video: video)
+        }
     }
 
     private var speedButton: some View {
@@ -519,6 +540,9 @@ struct VideoPlayerView: View {
                     .font(.caption2)
                     .foregroundColor(.white)
             }
+        }
+        .sheet(isPresented: $showSpeedPicker) {
+            SpeedPickerView(player: player ?? AVPlayer(), speeds: availableSpeeds)
         }
     }
 }

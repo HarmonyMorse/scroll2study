@@ -41,9 +41,36 @@ class VideoPlaybackManager: ObservableObject {
                     "lastWatchedAt": FieldValue.serverTimestamp(),
                     "progress": progress,
                 ], merge: true
-            ) { error in
+            ) { [weak self] error in
                 if let error = error {
                     print("Error updating progress: \(error.localizedDescription)")
+                    return
+                }
+                
+                // Update user achievements when video is completed
+                Task {
+                    do {
+                        if let user = try await self?.userService.getUser(id: userId) {
+                            var updatedStats = user.stats
+                            updatedStats.completedVideos += 1
+                            try await self?.userService.updateUserStats(userId: userId, stats: updatedStats)
+                            
+                            // Check and update achievements
+                            var updatedAchievements = user.achievements
+                            updatedAchievements.videos.completedVideos += 1
+                            
+                            // Check for new video milestones
+                            for milestone in AchievementService.shared.videoMilestones {
+                                if updatedAchievements.videos.completedVideos >= milestone {
+                                    updatedAchievements.videos.unlockedMilestones.insert(milestone)
+                                }
+                            }
+                            
+                            try await self?.userService.updateAchievements(userId: userId, achievements: updatedAchievements)
+                        }
+                    } catch {
+                        print("Error updating achievements: \(error.localizedDescription)")
+                    }
                 }
             }
         }

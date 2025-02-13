@@ -141,12 +141,17 @@ struct ProgressMenuView: View {
                         .font(.title2)
                     Text("Achievements")
                         .font(.headline)
+                    Text("(Coming Soon)")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
                 }
                 .frame(maxWidth: .infinity)
                 .padding()
                 .background(Color.orange.opacity(0.1))
                 .cornerRadius(10)
             }
+            .disabled(true)
+            .opacity(0.6)
 
             Button(action: {
                 isPresented = false

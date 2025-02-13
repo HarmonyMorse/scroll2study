@@ -2,65 +2,89 @@ import SwiftUI
 
 // Import our custom Collection type and related views
 struct CollectionsFullView: View {
-    typealias CustomCollection = Collection  // Define an alias to avoid protocol conflict
-    let collections: [CustomCollection]
-    @ObservedObject var viewModel: LibraryViewModel
+    let collections: [Collection]
+    let viewModel: LibraryViewModel
+    @Environment(\.dismiss) private var dismiss
     @State private var showingNewCollectionSheet = false
+    @State private var showingAICollectionSheet = false
 
     var body: some View {
-        ScrollView {
+        VStack {
             if collections.isEmpty {
-                VStack(spacing: 12) {
+                VStack(spacing: 20) {
                     Image(systemName: "folder.badge.plus")
-                        .font(.system(size: 50))
+                        .font(.system(size: 60))
                         .foregroundColor(.gray)
-                    Text("No Collections Yet")
-                        .font(.headline)
-                    Text("Create your first collection to organize your study materials")
-                        .font(.subheadline)
+                    
+                    Text("No collections yet")
+                        .font(.title2)
+                        .fontWeight(.medium)
+                    
+                    Text("Create collections to organize your videos by topic or subject")
+                        .font(.body)
                         .foregroundColor(.secondary)
                         .multilineTextAlignment(.center)
-                    Button(action: { showingNewCollectionSheet = true }) {
-                        Text("Create Collection")
-                            .font(.headline)
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding()
-                            .background(Color.blue)
-                            .cornerRadius(10)
-                    }
-                    .padding(.top)
-                }
-                .padding()
-                .frame(maxWidth: .infinity)
-            } else {
-                LazyVGrid(
-                    columns: [
-                        GridItem(.adaptive(minimum: 160), spacing: 16)
-                    ], spacing: 16
-                ) {
-                    ForEach(collections) { collection in
-                        NavigationLink(
-                            destination: CollectionDetailView(
-                                viewModel: viewModel, collection: collection)
-                        ) {
-                            CollectionCard(collection: collection, viewModel: viewModel)
+                        .padding(.horizontal)
+                    
+                    VStack(spacing: 12) {
+                        Button(action: { showingNewCollectionSheet = true }) {
+                            Label("Create Collection", systemImage: "folder.badge.plus")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .padding()
+                                .frame(maxWidth: 280)
+                                .background(Color.blue)
+                                .cornerRadius(10)
+                        }
+                        
+                        Button(action: { showingAICollectionSheet = true }) {
+                            Label("Smart Collection with AI", systemImage: "sparkles")
+                                .font(.headline)
+                                .foregroundColor(.white)
+                                .padding()
+                                .frame(maxWidth: 280)
+                                .background(Color.purple)
+                                .cornerRadius(10)
                         }
                     }
                 }
                 .padding()
+                .frame(maxHeight: .infinity)
+            } else {
+                ScrollView {
+                    LazyVGrid(
+                        columns: [
+                            GridItem(.adaptive(minimum: 160), spacing: 16)
+                        ], spacing: 16
+                    ) {
+                        ForEach(collections) { collection in
+                            CollectionCard(collection: collection, viewModel: viewModel)
+                        }
+                    }
+                    .padding()
+                }
             }
         }
         .navigationTitle("Collections")
         .toolbar {
-            ToolbarItem(placement: .primaryAction) {
-                Button(action: { showingNewCollectionSheet = true }) {
-                    Image(systemName: "folder.badge.plus")
+            ToolbarItem(placement: .navigationBarTrailing) {
+                Menu {
+                    Button(action: { showingNewCollectionSheet = true }) {
+                        Label("New Collection", systemImage: "folder.badge.plus")
+                    }
+                    Button(action: { showingAICollectionSheet = true }) {
+                        Label("Smart Collection", systemImage: "sparkles")
+                    }
+                } label: {
+                    Image(systemName: "plus")
                 }
             }
         }
         .sheet(isPresented: $showingNewCollectionSheet) {
-            NewCollectionOptionsSheet(viewModel: viewModel)
+            NewCollectionSheet(viewModel: viewModel)
+        }
+        .sheet(isPresented: $showingAICollectionSheet) {
+            AICollectionView(viewModel: viewModel)
         }
     }
 }

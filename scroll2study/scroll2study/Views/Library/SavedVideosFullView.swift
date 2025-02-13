@@ -1,7 +1,6 @@
 import Foundation
 import SwiftUI
 
-// Import our custom types
 struct SavedVideosFullView: View {
     let videos: [SavedVideo]
     @ObservedObject var viewModel: LibraryViewModel
@@ -9,6 +8,8 @@ struct SavedVideosFullView: View {
     @State private var selectedSubject: String?
     @State private var sortOption: SortOption = .dateDesc
     @State private var showingFilterSheet = false
+    @Environment(\.dismiss) private var dismiss
+    @EnvironmentObject private var videoSelection: VideoSelectionState
 
     enum SortOption {
         case dateAsc
@@ -75,80 +76,90 @@ struct SavedVideosFullView: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
-            // Search and filter bar
-            HStack {
-                Image(systemName: "magnifyingglass")
-                    .foregroundColor(.gray)
-                TextField("Search videos", text: $searchText)
-                    .textFieldStyle(RoundedBorderTextFieldStyle())
-
-                Menu(
-                    content: {
-                        ForEach(SortOption.allCases, id: \.label) { option in
-                            Button(action: { sortOption = option }) {
-                                HStack {
-                                    Text(option.label)
-                                    if sortOption == option {
-                                        Image(systemName: "checkmark")
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    label: {
-                        Image(systemName: "arrow.up.arrow.down")
-                            .foregroundColor(.blue)
-                    })
-
-                Button(action: { showingFilterSheet = true }) {
-                    Image(systemName: "line.3.horizontal.decrease.circle")
-                        .foregroundColor(.blue)
-                }
-            }
-            .padding()
-            .background(Color(.systemBackground))
-
-            // Filter chips
-            if selectedSubject != nil {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack {
-                        if let subject = selectedSubject {
-                            FilterChip(text: subject) {
-                                selectedSubject = nil
-                            }
-                        }
-                    }
-                    .padding(.horizontal)
-                }
-                .padding(.vertical, 8)
-            }
-
-            // Videos grid
-            ScrollView {
-                LazyVGrid(
-                    columns: [
-                        GridItem(.adaptive(minimum: 160), spacing: 16)
-                    ],
-                    spacing: 16
-                ) {
-                    ForEach(filteredVideos) { video in
-                        NavigationLink(
-                            destination: VideoPlayerView(
-                                video: viewModel.getVideo(id: video.id) ?? video.toVideo(),
-                                isCurrent: true)
-                        ) {
-                            SavedVideoCard(video: video, viewModel: viewModel)
-                        }
-                        .buttonStyle(PlainButtonStyle())
+        VStack {
+            if videos.isEmpty {
+                VStack(spacing: 20) {
+                    Image(systemName: "bookmark.slash")
+                        .font(.system(size: 60))
+                        .foregroundColor(.gray)
+                    
+                    Text("No saved videos yet")
+                        .font(.title2)
+                        .fontWeight(.medium)
+                    
+                    Text("Start exploring videos and bookmark the ones you want to watch later")
+                        .font(.body)
+                        .foregroundColor(.secondary)
+                        .multilineTextAlignment(.center)
+                        .padding(.horizontal)
+                    
+                    Button(action: {
+                        videoSelection.shouldNavigateToVideo = true
+                        dismiss()
+                    }) {
+                        Label("Explore Videos", systemImage: "play.circle.fill")
+                            .font(.headline)
+                            .foregroundColor(.white)
+                            .padding()
+                            .frame(maxWidth: 280)
+                            .background(Color.blue)
+                            .cornerRadius(10)
                     }
                 }
                 .padding()
+                .frame(maxHeight: .infinity)
+            } else {
+                HStack {
+                    Menu {
+                        ForEach(SortOption.allCases, id: \.self) { option in
+                            Button(action: { sortOption = option }) {
+                                if sortOption == option {
+                                    Label(option.label, systemImage: "checkmark")
+                                } else {
+                                    Text(option.label)
+                                }
+                            }
+                        }
+                    } label: {
+                        Label("Sort", systemImage: "arrow.up.arrow.down")
+                    }
+                    .padding(.horizontal)
+
+                    Spacer()
+
+                    Button(action: { showingFilterSheet = true }) {
+                        Label("Filter", systemImage: "line.3.horizontal.decrease.circle")
+                    }
+                    .padding(.horizontal)
+                }
+                .padding(.top)
+
+                ScrollView {
+                    LazyVGrid(
+                        columns: [
+                            GridItem(.adaptive(minimum: 160), spacing: 16)
+                        ],
+                        spacing: 16
+                    ) {
+                        ForEach(filteredVideos) { video in
+                            NavigationLink(
+                                destination: VideoPlayerView(
+                                    video: viewModel.getVideo(id: video.id) ?? video.toVideo(),
+                                    isCurrent: true)
+                            ) {
+                                SavedVideoCard(video: video, viewModel: viewModel)
+                            }
+                            .buttonStyle(PlainButtonStyle())
+                        }
+                    }
+                    .padding()
+                }
             }
-            .navigationTitle("Saved Videos")
-            .sheet(isPresented: $showingFilterSheet) {
-                FilterSheet(selectedSubject: $selectedSubject, subjects: subjects)
-            }
+        }
+        .navigationTitle("Saved Videos")
+        .searchable(text: $searchText, prompt: "Search videos")
+        .sheet(isPresented: $showingFilterSheet) {
+            FilterSheet(selectedSubject: $selectedSubject, subjects: subjects)
         }
     }
 }

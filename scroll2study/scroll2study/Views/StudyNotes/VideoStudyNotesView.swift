@@ -76,15 +76,23 @@ struct VideoStudyNotesView: View {
                             showNoteDetail(note)
                         }) {
                             HStack(alignment: .top, spacing: 12) {
-                                // Video thumbnail
-                                AsyncImage(url: URL(string: video.metadata.thumbnailUrl)) { image in
-                                    image
-                                        .resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                } placeholder: {
-                                    Rectangle()
-                                        .fill(Color.gray.opacity(0.2))
-                                }
+                                // Gradient background
+                                LinearGradient(
+                                    gradient: Gradient(colors: [
+                                        Color.blue.opacity(0.3),
+                                        Color.purple.opacity(0.3)
+                                    ]),
+                                    startPoint: .topLeading,
+                                    endPoint: .bottomTrailing
+                                )
+                                .overlay(
+                                    Text(video.title)
+                                        .font(.callout)
+                                        .fontWeight(.medium)
+                                        .foregroundColor(.white)
+                                        .multilineTextAlignment(.center)
+                                        .padding()
+                                )
                                 .frame(width: 120, height: 160)
                                 .clipShape(RoundedRectangle(cornerRadius: 8))
 

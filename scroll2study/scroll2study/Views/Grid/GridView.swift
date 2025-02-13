@@ -274,31 +274,22 @@ struct GridCell: View {
                             }
                         )
                 } else {
-                    // Show thumbnail for non-current cells
-                    AsyncImage(url: URL(string: video.metadata.thumbnailUrl)) { image in
-                        image
-                            .resizable()
-                            .aspectRatio(contentMode: .fill)
-                    } placeholder: {
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.3))
-                            .overlay(
-                                ProgressView()
-                            )
-                    }
+                    // Gradient background for non-current cells
+                    LinearGradient(
+                        gradient: Gradient(colors: [
+                            Color.blue.opacity(0.3),
+                            Color.purple.opacity(0.3)
+                        ]),
+                        startPoint: .topLeading,
+                        endPoint: .bottomTrailing
+                    )
                     .overlay(
-                        VStack {
-                            Spacer()
-                            VStack(spacing: 8) {
-                                Text(video.title)
-                                    .font(.headline)
-                                Text(video.description)
-                                    .font(.subheadline)
-                                    .foregroundColor(.secondary)
-                            }
+                        Text(video.title)
+                            .font(.callout)
+                            .fontWeight(.medium)
+                            .foregroundColor(.primary)
+                            .multilineTextAlignment(.center)
                             .padding()
-                            .background(.ultraThinMaterial)
-                        }
                     )
                 }
             } else {

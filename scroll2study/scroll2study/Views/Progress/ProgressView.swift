@@ -15,11 +15,28 @@ class ProgressViewModel: ObservableObject {
     private let db = Firestore.firestore()
     let gridService = GridService()  // Make this public since we need it in the view
 
-    func getSubjectProgress(_ subject: Subject) -> Double {
+    func getAvailableVideoCount(_ subject: Subject) -> Int {
+        return complexityLevels.reduce(0) { count, level in
+            count + (gridService.hasVideo(for: subject.id, at: level.level) ? 1 : 0)
+        }
+    }
+
+    func getWatchedVideoCount(_ subject: Subject) -> Int {
         let subjectProgress = progressMap[subject.id] ?? [:]
-        let totalLevels = complexityLevels.count
-        let completedLevels = subjectProgress.values.filter { $0 }.count
-        return totalLevels > 0 ? Double(completedLevels) / Double(totalLevels) : 0
+        return complexityLevels.reduce(0) { count, level in
+            if gridService.hasVideo(for: subject.id, at: level.level) {
+                return count + (subjectProgress[level.level] == true ? 1 : 0)
+            }
+            return count
+        }
+    }
+
+    func getSubjectProgress(_ subject: Subject) -> Double {
+        let availableVideos = getAvailableVideoCount(subject)
+        if availableVideos == 0 { return 0 }
+        
+        let watchedVideos = getWatchedVideoCount(subject)
+        return Double(watchedVideos) / Double(availableVideos)
     }
 
     func fetchData() async {

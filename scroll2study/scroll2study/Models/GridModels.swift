@@ -67,6 +67,11 @@ public struct VideoMetadata: Codable {
     public let storagePath: String
     public let captions: [Caption]?
 
+    public var transcript: String {
+        guard let captions = captions else { return "" }
+        return captions.map { $0.text }.joined(separator: "\n\n")
+    }
+
     public init(
         duration: Int, views: Int, thumbnailUrl: String, createdAt: Date, videoUrl: String,
         storagePath: String, captions: [Caption]? = nil

@@ -11,6 +11,7 @@ struct VideoStudyNotesView: View {
     @State private var isSummarizing: Bool = false
     @State private var errorMessage: String?
     @State private var selectedNote: StudyNote?
+    @State private var isTranscriptSummarizing: Bool = false
 
     private let studyNoteService = StudyNoteService.shared
     @Web private var web
@@ -61,6 +62,22 @@ struct VideoStudyNotesView: View {
                     .disabled(noteText.isEmpty || isSummarizing)
                 }
                 .padding()
+
+                Button(action: summarizeTranscript) {
+                    if isTranscriptSummarizing {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                    } else {
+                        Text("Summarize Video")
+                            .foregroundColor(.white)
+                            .padding(.horizontal, 20)
+                            .padding(.vertical, 10)
+                            .background(Color.purple)
+                            .cornerRadius(8)
+                    }
+                }
+                .disabled(isTranscriptSummarizing)
+                .padding(.bottom)
 
                 if let error = errorMessage {
                     Text(error)
@@ -233,6 +250,81 @@ struct VideoStudyNotesView: View {
 
             await MainActor.run {
                 isSummarizing = false
+            }
+        }
+    }
+
+    private func summarizeTranscript() {
+        guard let userId = Auth.auth().currentUser?.uid else { return }
+        isTranscriptSummarizing = true
+        errorMessage = nil
+
+        Task {
+            do {
+                // Call OpenAI API
+                let apiKey = Configuration.openAIKey
+                if apiKey.isEmpty {
+                    throw NSError(
+                        domain: "", code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: "OpenAI API key not found in EnvVars.plist"])
+                }
+
+                let transcript = video.metadata.transcript ?? "No transcript available"
+                
+                let response = try await web.post(
+                    "https://api.openai.com/v1/chat/completions",
+                    headers: [
+                        "Authorization": "Bearer \(apiKey)",
+                        "Content-Type": "application/json",
+                    ],
+                    body: [
+                        "model": "gpt-4",
+                        "messages": [
+                            [
+                                "role": "system",
+                                "content": """
+                                You are a helpful AI that creates comprehensive summaries of educational video transcripts.
+                                Focus on the main concepts, key points, and important takeaways.
+                                Structure the summary in a clear, easy-to-understand format.
+                                Include:
+                                - Main topic and purpose
+                                - Key concepts covered
+                                - Important examples or demonstrations
+                                - Practical applications or takeaways
+                                """,
+                            ],
+                            [
+                                "role": "user",
+                                "content": "Please summarize this video transcript:\n\n\(transcript)",
+                            ],
+                        ],
+                    ]
+                )
+
+                guard let summary = response["choices"]["0"]["message"]["content"].string else {
+                    throw NSError(
+                        domain: "", code: -1,
+                        userInfo: [NSLocalizedDescriptionKey: "Failed to generate summary"])
+                }
+
+                // Create a new study note with the transcript summary
+                let note = try await studyNoteService.createStudyNote(
+                    userId: userId,
+                    videoId: video.id,
+                    originalText: "Video Summary:\n\n\(summary)"
+                )
+
+                await MainActor.run {
+                    loadNotes()
+                }
+            } catch {
+                await MainActor.run {
+                    errorMessage = "Failed to summarize video: \(error.localizedDescription)"
+                }
+            }
+
+            await MainActor.run {
+                isTranscriptSummarizing = false
             }
         }
     }

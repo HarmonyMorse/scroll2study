@@ -13,6 +13,53 @@ if (!admin.apps.length) {
 const db = admin.firestore();
 const bucket = admin.storage().bucket();
 
+// Caption templates for different parts of the video
+const introductionTemplates = [
+    "Welcome to our comprehensive guide on {subject}",
+    "Let's explore the fascinating world of {subject}",
+    "In this {level} lesson of {subject}, we'll cover essential concepts",
+    "Ready to master {subject} at {level}?",
+    "Today's {subject} lesson will transform your understanding",
+    "Discover the power of {subject} in this {level} guide",
+    "Join us for an exciting journey into {subject}",
+    "Master {subject} concepts with this {level} tutorial",
+    "Unlock new perspectives in {subject} studies",
+    "Begin your {subject} adventure with {level} concepts"
+];
+
+const mainContentTemplates = [
+    "We'll break down complex {subject} theories into simple steps",
+    "Understanding {subject} is crucial for advancing to higher levels",
+    "Let's examine the core principles of {subject} together",
+    "These {subject} concepts form the foundation of {level} understanding",
+    "We'll explore practical applications in {subject}",
+    "Master these {subject} techniques to excel in your studies",
+    "Learn how {subject} connects to real-world scenarios",
+    "Discover the hidden patterns in {subject} at this level",
+    "Build your confidence in {subject} problem-solving",
+    "See how {subject} concepts interconnect at {level}"
+];
+
+const conclusionTemplates = [
+    "Now you're ready to apply these {subject} principles",
+    "Practice these {subject} concepts to reinforce your learning",
+    "You've gained valuable insights into {subject} fundamentals",
+    "Keep exploring {subject} to deepen your understanding",
+    "Use these {subject} skills in your future studies",
+    "Congratulations on completing this {level} {subject} lesson",
+    "You're now prepared for more advanced {subject} concepts",
+    "Remember to review these {subject} principles regularly",
+    "Apply your new {subject} knowledge to real problems",
+    "You're making great progress in mastering {subject}"
+];
+
+function getRandomTemplate(templates, subject, level) {
+    const template = templates[Math.floor(Math.random() * templates.length)];
+    return template
+        .replace('{subject}', subject.name)
+        .replace('{level}', level.name);
+}
+
 // Get signed URLs for video and thumbnail
 async function getSignedUrls() {
     try {
@@ -116,6 +163,7 @@ subjects.forEach((subject, subjectIndex) => {
         });
 
         // Create video (since we're only creating cells up to max level, all cells have videos)
+        const duration = Math.floor(Math.random() * (600 - 30 + 1)) + 30;
         videos.push({
             id: `${subject.id}_l${level.level}`,
             title: `${subject.name} - ${level.name}`,
@@ -123,12 +171,29 @@ subjects.forEach((subject, subjectIndex) => {
             subject: subject.id,
             complexityLevel: level.level,
             metadata: {
-                duration: 300, // placeholder duration
+                duration: duration,
                 views: 0,
                 videoUrl: temporaryVideoPath,
                 storagePath: temporaryVideoPath,
                 thumbnailUrl: temporaryThumbnailPath,
-                createdAt: admin.firestore.FieldValue.serverTimestamp()
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                captions: [
+                    {
+                        startTime: 0,
+                        endTime: 2,
+                        text: getRandomTemplate(introductionTemplates, subject, level)
+                    },
+                    {
+                        startTime: 2,
+                        endTime: 4.5,
+                        text: getRandomTemplate(mainContentTemplates, subject, level)
+                    },
+                    {
+                        startTime: 4.5,
+                        endTime: 7,
+                        text: getRandomTemplate(conclusionTemplates, subject, level)
+                    }
+                ]
             },
             position: { x: subjectIndex, y: levelIndex },
             isActive: true

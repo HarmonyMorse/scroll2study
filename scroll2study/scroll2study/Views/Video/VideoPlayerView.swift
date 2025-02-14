@@ -407,7 +407,7 @@ struct VideoPlayerView: View {
     private var captionOverlay: some View {
         VStack {
             Spacer()
-            if !currentCaption.isEmpty {
+            if !currentCaption.isEmpty && isPlaying {
                 Text(currentCaption)
                     .font(.system(size: 20, weight: .medium))
                     .foregroundColor(.white)
@@ -415,7 +415,7 @@ struct VideoPlayerView: View {
                     .padding(.vertical, 8)
                     .background(Color.black.opacity(0.7))
                     .cornerRadius(8)
-                    .padding(.bottom, 140)
+                    .padding(.bottom, 100)
                     .padding(.horizontal)
                     .multilineTextAlignment(.center)
                     .transition(.opacity)

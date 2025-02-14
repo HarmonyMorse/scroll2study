@@ -46,6 +46,18 @@ public struct ComplexityLevel: Identifiable, Codable {
     }
 }
 
+public struct Caption: Codable {
+    public let startTime: Double
+    public let endTime: Double
+    public let text: String
+
+    public init(startTime: Double, endTime: Double, text: String) {
+        self.startTime = startTime
+        self.endTime = endTime
+        self.text = text
+    }
+}
+
 public struct VideoMetadata: Codable {
     public let duration: Int
     public let views: Int
@@ -53,10 +65,11 @@ public struct VideoMetadata: Codable {
     public let createdAt: Date
     public let videoUrl: String
     public let storagePath: String
+    public let captions: [Caption]?
 
     public init(
         duration: Int, views: Int, thumbnailUrl: String, createdAt: Date, videoUrl: String,
-        storagePath: String
+        storagePath: String, captions: [Caption]? = nil
     ) {
         self.duration = duration
         self.views = views
@@ -64,6 +77,7 @@ public struct VideoMetadata: Codable {
         self.createdAt = createdAt
         self.videoUrl = videoUrl
         self.storagePath = storagePath
+        self.captions = captions
     }
 }
 

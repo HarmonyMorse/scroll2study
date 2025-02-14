@@ -203,7 +203,8 @@ struct VideoHeaderView: View {
                     thumbnailUrl: "",
                     createdAt: Date(),
                     videoUrl: "",
-                    storagePath: ""
+                    storagePath: "",
+                    captions: nil
                 ),
                 position: Position(x: 0, y: 0),
                 isActive: true

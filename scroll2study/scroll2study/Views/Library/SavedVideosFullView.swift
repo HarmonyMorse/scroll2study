@@ -191,7 +191,8 @@ extension SavedVideo {
                 thumbnailUrl: thumbnailURL,
                 createdAt: savedAt,
                 videoUrl: videoURL,
-                storagePath: ""
+                storagePath: "",
+                captions: nil
             ),
             position: Position(x: 0, y: 0),
             isActive: true

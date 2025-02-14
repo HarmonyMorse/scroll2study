@@ -75,7 +75,8 @@ public class GridService: ObservableObject {
                     thumbnailUrl: metadataData["thumbnailUrl"] as? String ?? "",
                     createdAt: (metadataData["createdAt"] as? Timestamp ?? Timestamp()).dateValue(),
                     videoUrl: metadataData["videoUrl"] as? String ?? "",
-                    storagePath: metadataData["storagePath"] as? String ?? ""
+                    storagePath: metadataData["storagePath"] as? String ?? "",
+                    captions: parseCaptions(from: metadataData["captions"] as? [[String: Any]] ?? [])
                 )
 
                 let position = Position(
@@ -118,5 +119,18 @@ public class GridService: ObservableObject {
 
     public func hasVideo(for subject: String, at complexityLevel: Int) -> Bool {
         return getVideo(for: subject, at: complexityLevel) != nil
+    }
+
+    private func parseCaptions(from data: [[String: Any]]) -> [Caption]? {
+        guard !data.isEmpty else { return nil }
+        
+        return data.compactMap { captionData in
+            guard let startTime = captionData["startTime"] as? Double,
+                  let endTime = captionData["endTime"] as? Double,
+                  let text = captionData["text"] as? String
+            else { return nil }
+            
+            return Caption(startTime: startTime, endTime: endTime, text: text)
+        }
     }
 }

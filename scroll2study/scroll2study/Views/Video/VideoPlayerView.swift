@@ -394,7 +394,7 @@ struct VideoPlayerView: View {
                     .padding(.vertical, 8)
                     .background(Color.black.opacity(0.7))
                     .cornerRadius(8)
-                    .padding(.bottom, 100)
+                    .padding(.bottom, 140)
                     .padding(.horizontal)
                     .multilineTextAlignment(.center)
                     .transition(.opacity)
@@ -404,7 +404,7 @@ struct VideoPlayerView: View {
                 controlButtonStack
                 Spacer()
             }
-            .padding(.bottom, 20)
+            .padding(.bottom, 60)
             .padding(.leading, 16)
         }
     }

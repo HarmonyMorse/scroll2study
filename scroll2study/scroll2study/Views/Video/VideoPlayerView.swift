@@ -24,6 +24,7 @@ struct VideoPlayerView: View {
     @State private var showCelebration = false  // New state for celebration popup
     @State private var celebrationMessage: String = ""  // Store the selected message
     @State private var currentCaption: String = ""  // Add state for current caption
+    @State private var showControls = false  // Add state for controls visibility
     private let availableSpeeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
     private let messages = [
         "Great job! 🎉",
@@ -75,7 +76,31 @@ struct VideoPlayerView: View {
                     .overlay(bufferingOverlay)
                     .overlay(celebrationOverlay)
                     .overlay(playPauseOverlay)
-                    .overlay(controlsOverlay)
+                    .overlay(captionOverlay)  // Always show captions
+                    .overlay(controlsOverlay.opacity(showControls ? 1 : 0))
+                    .onTapGesture {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showControls = true
+                        }
+                        togglePlayback()
+                    }
+                    .onChange(of: isPlaying) { newIsPlaying in
+                        withAnimation(.easeInOut) {
+                            showControls = !newIsPlaying
+                        }
+                    }
+                    .onChange(of: isCurrent) { newIsCurrent in
+                        if !newIsCurrent {
+                            player.pause()  // Always pause when not current
+                            playbackManager.stopCurrentPlayback()
+                            cleanupPlayer()  // Stop and cleanup when swiped away
+                        }
+                    }
+                    .onDisappear {
+                        print("DEBUG: VideoPlayerView disappeared")
+                        player.pause()  // Ensure video is paused when view disappears
+                        cleanupPlayer()
+                    }
             } else if isLoading {
                 ProgressView()
                     .scaleEffect(1.5)
@@ -104,21 +129,6 @@ struct VideoPlayerView: View {
         }
         .safeAreaInset(edge: .bottom) {  // Add safe area inset for tab bar
             Color.clear.frame(height: 0)
-        }
-        .onTapGesture {
-            togglePlayback()
-        }
-        .onChange(of: isCurrent) { newIsCurrent in
-            if !newIsCurrent {
-                player?.pause()  // Always pause when not current
-                playbackManager.stopCurrentPlayback()
-                cleanupPlayer()  // Stop and cleanup when swiped away
-            }
-        }
-        .onDisappear {
-            print("DEBUG: VideoPlayerView disappeared")
-            player?.pause()  // Ensure video is paused when view disappears
-            cleanupPlayer()
         }
     }
 
@@ -385,7 +395,18 @@ struct VideoPlayerView: View {
     private var controlsOverlay: some View {
         VStack {
             Spacer()
-            // Add caption overlay at the bottom
+            HStack(alignment: .bottom) {
+                controlButtonStack
+                Spacer()
+            }
+            .padding(.bottom, 60)
+            .padding(.leading, 16)
+        }
+    }
+
+    private var captionOverlay: some View {
+        VStack {
+            Spacer()
             if !currentCaption.isEmpty {
                 Text(currentCaption)
                     .font(.system(size: 20, weight: .medium))
@@ -399,13 +420,6 @@ struct VideoPlayerView: View {
                     .multilineTextAlignment(.center)
                     .transition(.opacity)
             }
-            
-            HStack(alignment: .bottom) {
-                controlButtonStack
-                Spacer()
-            }
-            .padding(.bottom, 60)
-            .padding(.leading, 16)
         }
     }
 

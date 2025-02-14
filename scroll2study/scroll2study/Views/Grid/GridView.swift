@@ -9,6 +9,7 @@ import SwiftUI
 struct GridView: View {
     @StateObject private var gridService = GridService()
     @EnvironmentObject private var videoSelection: VideoSelectionState
+    @StateObject private var playbackManager = VideoPlaybackManager.shared
     @State private var currentSubjectIndex = 0
     @State private var currentLevelIndex = 0
     @State private var isDragging = false
@@ -153,7 +154,9 @@ struct GridView: View {
     private var navigationOverlay: some View {
         VStack {
             if let subject = currentSubject,
-                let level = currentLevel
+                let level = currentLevel,
+                let video = gridService.getVideo(for: subject.id, at: level.level),
+                !playbackManager.isPlaying(videoId: video.id)
             {
                 Spacer()
                 HStack(spacing: 4) {
@@ -170,9 +173,11 @@ struct GridView: View {
                 .clipShape(Capsule())
                 .shadow(radius: 2)
                 .padding(.bottom, 100)
+                .transition(.opacity)
             }
         }
         .allowsHitTesting(false)
+        .animation(.easeInOut, value: playbackManager.currentlyPlayingVideoId)
     }
 
     var body: some View {

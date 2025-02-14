@@ -259,20 +259,6 @@ struct GridCell: View {
                 if isCurrent {
                     VideoPlayerView(video: video, isCurrent: true)
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
-                        .overlay(
-                            VStack {
-                                Spacer()
-                                VStack(spacing: 8) {
-                                    Text(video.title)
-                                        .font(.headline)
-                                    Text(video.description)
-                                        .font(.subheadline)
-                                        .foregroundColor(.secondary)
-                                }
-                                .padding()
-                                .background(.ultraThinMaterial)
-                            }
-                        )
                 } else {
                     // Gradient background for non-current cells
                     LinearGradient(

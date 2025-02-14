@@ -4,7 +4,6 @@ struct StudyNotesFullView: View {
     let notes: [StudyNote]
     let viewModel: LibraryViewModel
     @Environment(\.dismiss) private var dismiss
-    @State private var showingNewNoteSheet = false
     @EnvironmentObject private var videoSelection: VideoSelectionState
 
     var body: some View {
@@ -57,17 +56,5 @@ struct StudyNotesFullView: View {
             }
         }
         .navigationTitle("Study Notes")
-        .toolbar {
-            if !notes.isEmpty {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showingNewNoteSheet = true }) {
-                        Image(systemName: "square.and.pencil")
-                    }
-                }
-            }
-        }
-        .sheet(isPresented: $showingNewNoteSheet) {
-            StandaloneStudyNoteView()
-        }
     }
 }

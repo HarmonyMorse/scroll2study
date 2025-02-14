@@ -61,13 +61,7 @@ struct StudyNoteCard: View {
         .buttonStyle(PlainButtonStyle())
         .sheet(isPresented: $showingDetail) {
             NavigationView {
-                if let video = video {
-                    VideoStudyNotesView(video: video)
-                } else {
-                    Text(note.originalText)
-                        .padding()
-                        .navigationTitle("Study Note")
-                }
+                StudyNoteDetailView(note: note, video: video)
             }
         }
     }

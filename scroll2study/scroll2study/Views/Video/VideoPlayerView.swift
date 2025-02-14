@@ -23,6 +23,7 @@ struct VideoPlayerView: View {
     @State private var showStudyNotes = false
     @State private var showCelebration = false  // New state for celebration popup
     @State private var celebrationMessage: String = ""  // Store the selected message
+    @State private var currentCaption: String = ""  // Add state for current caption
     private let availableSpeeds = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0]
     private let messages = [
         "Great job! 🎉",
@@ -280,6 +281,12 @@ struct VideoPlayerView: View {
         let interval = CMTime(seconds: 0.1, preferredTimescale: 600)
         let observer = player.addPeriodicTimeObserver(forInterval: interval, queue: .main) { time in
             self.currentTime = time.seconds
+            // Update current caption
+            if let captions = video.metadata.captions {
+                self.currentCaption = captions.first { caption in
+                    time.seconds >= caption.startTime && time.seconds <= caption.endTime
+                }?.text ?? ""
+            }
         }
         timeObserver = observer
     }
@@ -376,12 +383,30 @@ struct VideoPlayerView: View {
     }
 
     private var controlsOverlay: some View {
-        HStack(alignment: .bottom) {
-            controlButtonStack
+        VStack {
             Spacer()
+            // Add caption overlay at the bottom
+            if !currentCaption.isEmpty {
+                Text(currentCaption)
+                    .font(.system(size: 20, weight: .medium))
+                    .foregroundColor(.white)
+                    .padding(.horizontal)
+                    .padding(.vertical, 8)
+                    .background(Color.black.opacity(0.7))
+                    .cornerRadius(8)
+                    .padding(.bottom, 100)
+                    .padding(.horizontal)
+                    .multilineTextAlignment(.center)
+                    .transition(.opacity)
+            }
+            
+            HStack(alignment: .bottom) {
+                controlButtonStack
+                Spacer()
+            }
+            .padding(.bottom, 20)
+            .padding(.leading, 16)
         }
-        .padding(.bottom, 20)
-        .padding(.leading, 16)
     }
 
     private var controlButtonStack: some View {
@@ -631,7 +656,8 @@ struct CelebrationView: View {
                 thumbnailUrl: "",
                 createdAt: Date(),
                 videoUrl: "",
-                storagePath: ""
+                storagePath: "",
+                captions: nil
             ),
             position: Position(x: 0, y: 0),
             isActive: true

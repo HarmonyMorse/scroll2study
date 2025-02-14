@@ -164,6 +164,24 @@ subjects.forEach((subject, subjectIndex) => {
 
         // Create video (since we're only creating cells up to max level, all cells have videos)
         const duration = Math.floor(Math.random() * (600 - 30 + 1)) + 30;
+        const captions = [
+            {
+                startTime: 1,
+                endTime: 2,
+                text: getRandomTemplate(introductionTemplates, subject, level)
+            },
+            {
+                startTime: 2,
+                endTime: 4.5,
+                text: getRandomTemplate(mainContentTemplates, subject, level)
+            },
+            {
+                startTime: 4.5,
+                endTime: 7,
+                text: getRandomTemplate(conclusionTemplates, subject, level)
+            }
+        ];
+
         videos.push({
             id: `${subject.id}_l${level.level}`,
             title: `${subject.name} - ${level.name}`,
@@ -177,23 +195,7 @@ subjects.forEach((subject, subjectIndex) => {
                 storagePath: temporaryVideoPath,
                 thumbnailUrl: temporaryThumbnailPath,
                 createdAt: admin.firestore.FieldValue.serverTimestamp(),
-                captions: [
-                    {
-                        startTime: 0,
-                        endTime: 2,
-                        text: getRandomTemplate(introductionTemplates, subject, level)
-                    },
-                    {
-                        startTime: 2,
-                        endTime: 4.5,
-                        text: getRandomTemplate(mainContentTemplates, subject, level)
-                    },
-                    {
-                        startTime: 4.5,
-                        endTime: 7,
-                        text: getRandomTemplate(conclusionTemplates, subject, level)
-                    }
-                ]
+                captions: captions
             },
             position: { x: subjectIndex, y: levelIndex },
             isActive: true
